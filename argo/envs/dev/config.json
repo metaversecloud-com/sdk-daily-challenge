@@ -1,5 +1,5 @@
 {
-  "app": "sdk-ai-boilerplate",
+  "app": "sdk-daily-challenge",
   "env": "dev",
   "targetRevision": "dev",
   "clusterName": "Topia-dev-SDK-Apps",
@@ -7,10 +7,10 @@
   "namespace": "sdk-apps-dev",
   "services": [
     {
-      "name": "ai-boilerplate0",
-      "image": "368076259134.dkr.ecr.us-east-1.amazonaws.com/sdk-example:sdk-ai-boilerplate",
+      "name": "dailych0",
+      "image": "368076259134.dkr.ecr.us-east-1.amazonaws.com/sdk-example:sdk-daily-challenge",
       "hosts": [
-        "ai-boilerplate0-dev-topia.topia-rtsdk.com"
+        "dailych0-dev-topia.topia-rtsdk.com"
       ],
       "health": "/api/system/health"
     }
