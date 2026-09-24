@@ -1,42 +1,92 @@
 import { useContext, useEffect, useState } from "react";
 
-// components
 import { PageContainer } from "@/components";
-
-// context
-import { GlobalDispatchContext, GlobalStateContext } from "@/context/GlobalContext";
-import { ErrorType } from "@/context/types";
-
-// utils
-import { backendAPI, setErrorMessage, setGameState } from "@/utils";
+import { GlobalStateContext } from "@/context/GlobalContext";
+import { backendAPI } from "@/utils";
+import { WordleGameState } from "@shared/types/WordQuestTypes";
+import { WordleBoard } from "@/components/wordquest/WordQuestBoard";
+import "@/styles/wordquest/wordquest.css";
 
 export const Home = () => {
-  const dispatch = useContext(GlobalDispatchContext);
-  const { droppedAsset, hasInteractiveParams } = useContext(GlobalStateContext);
-  const imgSrc = droppedAsset?.topLayerURL || droppedAsset?.bottomLayerURL;
+  const { hasInteractiveParams } = useContext(GlobalStateContext);
 
+  const [gameState, setGameStateLocal] = useState<WordleGameState | null>(null);
+  const [currentGuess, setCurrentGuess] = useState("");
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (hasInteractiveParams) {
       backendAPI
         .get("/game-state")
-        .then((response) => {
-          setGameState(dispatch, response.data);
-        })
-        .catch((error) => setErrorMessage(dispatch, error as ErrorType))
+        .then((response) => setGameStateLocal(response.data.data))
+        .catch((err) => setError(err?.response?.data?.error || "Failed to load."))
         .finally(() => setIsLoading(false));
     }
   }, [hasInteractiveParams]);
 
+  const handleSubmitGuess = async () => {
+    if (!gameState) return;
+    try {
+      const response = await backendAPI.post("/guess", { guess: currentGuess });
+      setGameStateLocal(response.data.data);
+      setCurrentGuess("");
+      setError(null);
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Something went wrong.");
+    }
+  };
+
+  const handleReset = async () => {
+    try {
+      const response = await backendAPI.post("/reset");
+      setGameStateLocal(response.data.data);
+      setCurrentGuess("");
+      setError(null);
+    } catch (err: any) {
+      setError(err?.response?.data?.error || "Reset failed.");
+    }
+  };
+
   return (
-    <PageContainer isLoading={isLoading} headerText="Server side example using interactive parameters">
-      {droppedAsset?.id && (
-        <div className="flex flex-col w-full items-start">
-          <p className="mt-4 mb-2">
-            You have successfully retrieved the dropped asset details for {droppedAsset.assetName}!
-          </p>
-          {imgSrc && <img className="w-96 h-96 object-cover rounded-2xl my-4" alt="preview" src={imgSrc} />}
+    <PageContainer isLoading={isLoading} headerText="WordQuest">
+      {gameState && (
+        <div className="flex flex-col items-center gap-4 w-full">
+          {/* DEV ONLY — remove before shipping */}
+          <button type="button" className="btn btn-outline" onClick={handleReset}>
+            Reset (dev)
+          </button>
+
+          <WordleBoard gameState={gameState} currentGuess={currentGuess} />
+
+          {gameState.status === "playing" ? (
+            <div className="flex gap-2 items-center">
+              <label htmlFor="guess-input" className="sr-only">
+                Enter your guess
+              </label>
+              <input
+                id="guess-input"
+                className="input"
+                value={currentGuess}
+                maxLength={gameState.wordLength}
+                onChange={(e) => setCurrentGuess(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
+                onKeyDown={(e) => e.key === "Enter" && handleSubmitGuess()}
+              />
+              <button type="button" className="btn" onClick={handleSubmitGuess}>
+                Guess
+              </button>
+            </div>
+          ) : (
+            <p className="p2" role="status">
+              {gameState.status === "won" ? "You solved it! 🎉" : "Out of guesses today."}
+            </p>
+          )}
+
+          {error && (
+            <p className="p3" role="alert" style={{ color: "red" }}>
+              {error}
+            </p>
+          )}
         </div>
       )}
     </PageContainer>

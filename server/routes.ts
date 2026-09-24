@@ -1,6 +1,7 @@
 import express from "express";
-import { handleGetGameState } from "./controllers/index.js";
+import { handleGetGameState, handleSubmitGuess, handleResetGame } from "./controllers/index.js";
 import { getVersion } from "@utils/getVersion.js";
+
 
 const router = express.Router();
 const SERVER_START_DATE = new Date();
@@ -24,5 +25,7 @@ router.get("/system/health", (req, res) => {
 });
 
 router.get("/game-state", handleGetGameState);
+router.post("/guess", handleSubmitGuess);
+router.post("/reset", handleResetGame); 
 
 export default router;

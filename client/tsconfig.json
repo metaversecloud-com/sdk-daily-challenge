@@ -30,6 +30,6 @@
       "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src", "../shared"],
+  "include": ["src", "../shared", "../server/utils/wordquest"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

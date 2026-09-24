@@ -1,0 +1,13 @@
+.wordle-tile {
+  width: 3rem;
+  height: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ccc;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+.wordle-tile-correct { background: #6aaa64; color: white; border-color: #6aaa64; }
+.wordle-tile-present { background: #c9b458; color: white; border-color: #c9b458; }
+.wordle-tile-absent  { background: #787c7e; color: white; border-color: #787c7e; }
