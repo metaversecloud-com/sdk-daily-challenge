@@ -1,5 +1,5 @@
 import { WordleGameState } from "@shared/types/WordQuestTypes";
-import { WordleTile } from "./WordQuestTile";
+import { WordQuestTile } from "./WordQuestTile";
 
 interface Props {
   gameState: WordleGameState;
@@ -27,13 +27,13 @@ export const WordleBoard = ({ gameState, currentGuess }: Props) => {
     }
 
     rows.push(
-      <div className="flex gap-2" key={i}>
+      <div className="wordquest-row" key={i}>
         {letters.map((letter, j) => (
-          <WordleTile key={j} letter={letter.trim()} state={states[j] as any} />
+          <WordQuestTile key={j} letter={letter.trim()} state={states[j] as any} />
         ))}
       </div>,
     );
   }
 
-  return <div className="flex flex-col gap-2">{rows}</div>;
+  return <div className="wordquest-card">{rows}</div>;
 };

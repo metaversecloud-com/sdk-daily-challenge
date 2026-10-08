@@ -6,13 +6,16 @@ interface Props {
 }
 
 const stateClass: Record<string, string> = {
-  correct: "wordle-tile-correct",
-  present: "wordle-tile-present",
-  absent: "wordle-tile-absent",
+  correct: "wordquest-tile-correct",
+  present: "wordquest-tile-present",
+  absent: "wordquest-tile-absent",
 };
 
-export const WordleTile = ({ letter, state }: Props) => (
-  <div className={`wordle-tile ${state ? stateClass[state] : ""}`} aria-label={state ? `${letter}: ${state}` : letter}>
+export const WordQuestTile = ({ letter, state }: Props) => (
+  <div
+    className={`wordquest-tile ${state ? stateClass[state] : ""}`}
+    aria-label={state ? `${letter}: ${state}` : letter}
+  >
     {letter}
   </div>
 );

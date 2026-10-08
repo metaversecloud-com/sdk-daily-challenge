@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
 import { errorHandler, getCredentials, getVisitor } from "@utils/index.js";
 import { pickDailyWord, getTodayDateString } from "@utils/wordquest/pickDailyWord.js";
-import { WordleVisitorData } from "@shared/types/WordQuestTypes.js";
+import { createDefaultStats } from "@utils/wordquest/stats.js";
+import { MAX_GUESSES, WORD_LENGTH } from "@utils/wordquest/words.js";
+import { WordQuestVisitorData, WordQuestGameState } from "@shared/types/WordQuestTypes.js";
 
-// DEV/TEST ONLY — lets you replay today's puzzle without waiting for the daily reset.
-// Remove this route before shipping, or gate it behind isAdmin / NODE_ENV !== "production".
+// DEV/TEST ONLY: remove this route before shipping.
 export const handleResetGame = async (req: Request, res: Response) => {
   try {
     const credentials = getCredentials(req.query);
@@ -13,23 +14,33 @@ export const handleResetGame = async (req: Request, res: Response) => {
 
     const { visitor } = await getVisitor(credentials, true);
     const dataObject = await visitor.fetchDataObject();
+    const existing: WordQuestVisitorData | undefined = dataObject?.[key];
 
     const today = getTodayDateString();
-    const wordleData: WordleVisitorData = {
+    const wordQuestData: WordQuestVisitorData = {
       date: today,
-      targetWord: pickDailyWord(today + Date.now()), // vary the seed so you don't get the same word every reset
+      targetWord: pickDailyWord(today + Date.now()),
       guesses: [],
       status: "playing",
+      stats: existing?.stats ?? createDefaultStats(),
     };
 
-    await visitor.setDataObject({ ...dataObject, [key]: wordleData });
+    await visitor.setDataObject({ ...dataObject, [key]: wordQuestData });
 
-    return res.json({ success: true, data: { guesses: [], status: "playing", maxGuesses: 6, wordLength: 5 } });
+    const data: WordQuestGameState = {
+      guesses: [],
+      status: "playing",
+      maxGuesses: MAX_GUESSES,
+      wordLength: WORD_LENGTH,
+      stats: wordQuestData.stats,
+    };
+
+    return res.json({ success: true, data });
   } catch (error) {
     return errorHandler({
       error,
       functionName: "handleResetGame",
-      message: "Error resetting Wordle game state",
+      message: "Error resetting WordQuest game state",
       req,
       res,
     });

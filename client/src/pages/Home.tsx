@@ -5,6 +5,7 @@ import { GlobalStateContext } from "@/context/GlobalContext";
 import { backendAPI } from "@/utils";
 import { WordleGameState } from "@shared/types/WordQuestTypes";
 import { WordleBoard } from "@/components/wordquest/WordQuestBoard";
+import { WordQuestStats } from "@/components/wordquest/WordQuestStats";
 import "@/styles/wordquest/wordquest.css";
 
 export const Home = () => {
@@ -52,11 +53,6 @@ export const Home = () => {
     <PageContainer isLoading={isLoading} headerText="WordQuest">
       {gameState && (
         <div className="flex flex-col items-center gap-4 w-full">
-          {/* DEV ONLY — remove before shipping */}
-          <button type="button" className="btn btn-outline" onClick={handleReset}>
-            Reset (dev)
-          </button>
-
           <WordleBoard gameState={gameState} currentGuess={currentGuess} />
 
           {gameState.status === "playing" ? (
@@ -72,21 +68,30 @@ export const Home = () => {
                 onChange={(e) => setCurrentGuess(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
                 onKeyDown={(e) => e.key === "Enter" && handleSubmitGuess()}
               />
-              <button type="button" className="btn" onClick={handleSubmitGuess}>
+              <button type="button" className="btn wordquest-guess-btn" onClick={handleSubmitGuess}>
                 Guess
               </button>
             </div>
           ) : (
             <p className="p2" role="status">
-              {gameState.status === "won" ? "You solved it! 🎉" : "Out of guesses today."}
+              {gameState.status === "won"
+                ? "You solved it! 🎉"
+                : `Out of guesses! The word was ${gameState.targetWord}.`}
             </p>
           )}
+
+          {gameState.status !== "playing" && <WordQuestStats stats={gameState.stats} />}
 
           {error && (
             <p className="p3" role="alert" style={{ color: "red" }}>
               {error}
             </p>
           )}
+
+          {/* DEV ONLY — remove before shipping */}
+          <button type="button" className="btn btn-outline" onClick={handleReset}>
+            Reset (dev)
+          </button>
         </div>
       )}
     </PageContainer>

@@ -1,11 +1,12 @@
 import { getVisitor } from "@utils/index.js";
 import { Credentials } from "../../types/Credentials"; // adjust to actual path in repo
-import { WordleVisitorData } from "@shared/types/WordQuestTypes.js";
-import { pickDailyWord, getTodayDateString } from "../../utils/wordquest/pickDailyWord";
+import { WordQuestVisitorData } from "@shared/types/WordQuestTypes.js";
+import { pickDailyWord, getTodayDateString } from "@utils/wordquest/pickDailyWord.js";
+import { createDefaultStats, getYesterdayDateString } from "@utils/wordquest/stats.js";
 
 const buildKey = (urlSlug: string, sceneDropId: string) => `${urlSlug}-${sceneDropId}`;
 
-export const getWordleVisitorData = async (credentials: Credentials) => {
+export const getWordQuestVisitorData = async (credentials: Credentials) => {
   const { urlSlug, sceneDropId } = credentials;
   const key = buildKey(urlSlug, sceneDropId);
 
@@ -13,21 +14,32 @@ export const getWordleVisitorData = async (credentials: Credentials) => {
 
   const dataObject = await visitor.fetchDataObject();
   const today = getTodayDateString();
-  const existing: WordleVisitorData | undefined = dataObject?.[key];
+  const existing: WordQuestVisitorData | undefined = dataObject?.[key];
 
-  let wordleData: WordleVisitorData;
+  let wordQuestData: WordQuestVisitorData;
 
   if (!existing || existing.date !== today) {
-    wordleData = {
+    // Copy so we never mutate the stored object
+    const stats = {
+      ...(existing?.stats ?? createDefaultStats()),
+      guessDistribution: [...(existing?.stats?.guessDistribution ?? createDefaultStats().guessDistribution)],
+    };
+
+    // If they skipped a day, the streak is broken.
+    if (stats.lastWonDate !== getYesterdayDateString()) stats.currentStreak = 0;
+
+    wordQuestData = {
       date: today,
       targetWord: pickDailyWord(today),
       guesses: [],
       status: "playing",
+      stats,
     };
-    await visitor.setDataObject({ ...dataObject, [key]: wordleData });
+    await visitor.setDataObject({ ...dataObject, [key]: wordQuestData});
   } else {
-    wordleData = existing;
+    // Handles data saved before stats existed
+    wordQuestData = { ...existing, stats: existing.stats ?? createDefaultStats() };
   }
 
-  return { visitor, key, wordleData };
+  return { visitor, key, wordQuestData };
 };
