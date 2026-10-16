@@ -4,16 +4,32 @@ import { fileURLToPath } from "url";
 
 export const WORD_LENGTH = 5;
 export const MAX_GUESSES = 6;
+export const MAX_CUSTOM_ANSWERS = 500;
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const wordListPath = path.join(__dirname, "words.txt");
 
-const rawWords = fs.readFileSync(wordListPath, "utf-8");
+const loadList = (file: string): string[] => {
+  const fullPath = path.join(__dirname, file);
+  if (!fs.existsSync(fullPath)) return [];
+  return fs
+    .readFileSync(fullPath, "utf-8")
+    .split(/\r?\n/)
+    .map((w) => w.trim().toUpperCase())
+    .filter((w) => w.length === WORD_LENGTH && /^[A-Z]+$/.test(w));
+};
 
-export const WORD_LIST: string[] = rawWords
-  .split("\n")
-  .map((w) => w.trim().toUpperCase())
-  .filter((w) => w.length === WORD_LENGTH && /^[A-Z]+$/.test(w));
+// Word bank: everything a player may guess
+export const WORD_BANK: string[] = Array.from(new Set(loadList("wordlist.txt")));
+export const WORD_BANK_SET = new Set(WORD_BANK);
+export const WORD_LIST = WORD_BANK; // alias so handleSubmitGuess.ts keeps working
 
-// Same list used for both valid guesses and possible daily answers.
-export const ANSWER_LIST: string[] = WORD_LIST;
+// Default answers: a subset of the bank
+const defaults = Array.from(new Set(loadList("answerlist.txt"))).filter((w) => WORD_BANK_SET.has(w));
+if (defaults.length === 0) {
+  console.warn("answerlist.txt is missing, empty, or has no words from the bank. Using the whole bank.");
+}
+export const DEFAULT_ANSWER_LIST: string[] = defaults.length ? defaults : WORD_BANK;
+
+if (WORD_BANK.length === 0) {
+  console.warn("wordlist.txt has no 5-letter words. Check the file name and contents.");
+}
