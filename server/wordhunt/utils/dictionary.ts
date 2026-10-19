@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { BLOCKED_EXACT_WORDS, BLOCKED_STEMS, BLOCKED_STEM_SUFFIXES, BLOCKED_SUBSTRINGS } from "../data/blockedWords.js";
+import { TOPIA_WORD } from "./badges.js";
 import { MIN_WORD_LENGTH } from "./constants.js";
 
 // The server is always started from the `server/` directory (dev, prod, Docker, and Jest),
@@ -41,6 +42,8 @@ export const getDictionary = () => {
   if (!dictionary) {
     try {
       dictionary = parseDictionary(fs.readFileSync(DICTIONARY_PATH, "utf8"));
+      // "Topia" is not in the ENABLE list, but finding it earns a badge.
+      dictionary.add(TOPIA_WORD);
     } catch (error) {
       throw new Error(`Unable to load Word Hunt dictionary from ${DICTIONARY_PATH}: ${error}`);
     }

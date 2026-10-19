@@ -2,7 +2,15 @@ import { useCallback, useContext, useEffect, useRef, useState } from "react";
 
 // components
 import { Loading } from "@/components";
-import { WordHuntExitModal, WordHuntGrid, WordHuntResults, WordHuntStart } from "@/components/wordhunt";
+import {
+  WordHuntBadges,
+  WordHuntExitModal,
+  WordHuntGrid,
+  WordHuntResults,
+  WordHuntStart,
+  WordHuntTab,
+  WordHuntTabs,
+} from "@/components/wordhunt";
 
 // context
 import { GlobalDispatchContext, GlobalStateContext } from "@/context/GlobalContext";
@@ -52,6 +60,8 @@ export const WordHunt = () => {
   const [timeAnnouncement, setTimeAnnouncement] = useState("");
   const [isStarting, setIsStarting] = useState(false);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [tab, setTab] = useState<WordHuntTab>("play");
+  const [newBadges, setNewBadges] = useState<string[]>([]);
 
   // Difference between the server clock and this device's clock, so the timer matches the server.
   const clockOffsetRef = useRef(0);
@@ -94,6 +104,8 @@ export const WordHunt = () => {
       applyGameState(response.data.data);
       isEndingRef.current = false;
       announcedRef.current = new Set();
+      setTab("play");
+      setNewBadges([]);
       setFeedback(null);
       setCurrentWord("");
       setTimeAnnouncement("");
@@ -116,9 +128,11 @@ export const WordHunt = () => {
     try {
       const response = await backendAPI.post("/wordhunt/end", { gameId: gameRef.current.gameId });
       applyGameState(response.data.data);
+      setNewBadges((response.data.data as WordHuntGameStateResponse).newBadges ?? []);
     } catch (error) {
       setErrorMessage(dispatch, error as ErrorType);
     }
+    setTab("play");
     setPhase("results");
   }, [dispatch]);
 
@@ -191,7 +205,10 @@ export const WordHunt = () => {
   if (phase === "start" || !board) {
     return (
       <main className="wh-app">
-        <WordHuntStart isStarting={isStarting} onStart={startGame} />
+        <WordHuntTabs active={tab} onChange={setTab} />
+        <div id="wh-tabpanel" role="tabpanel" aria-labelledby={`wh-tab-${tab}`}>
+          {tab === "play" ? <WordHuntStart isStarting={isStarting} onStart={startGame} /> : <WordHuntBadges />}
+        </div>
         {errorMessage}
       </main>
     );
@@ -200,7 +217,31 @@ export const WordHunt = () => {
   if (phase === "results" && game) {
     return (
       <main className="wh-app">
-        <WordHuntResults game={game} isStarting={isStarting} onPlayAgain={startGame} />
+        <WordHuntTabs active={tab} onChange={setTab} playLabel="Results" />
+        <div id="wh-tabpanel" role="tabpanel" aria-labelledby={`wh-tab-${tab}`}>
+          {tab === "play" ? (
+            <>
+              {newBadges.length > 0 && (
+                <div className="wh-panel mb-4" role="status">
+                  <h2 className="h4">
+                    {newBadges.length === 1 ? "New badge earned!" : `${newBadges.length} new badges earned!`}
+                  </h2>
+                  <ul className="wh-new-badges p2">
+                    {newBadges.map((name) => (
+                      <li key={name}>{name}</li>
+                    ))}
+                  </ul>
+                  <button type="button" className="btn wh-btn wh-btn--outline mt-2" onClick={() => setTab("badges")}>
+                    See my badges
+                  </button>
+                </div>
+              )}
+              <WordHuntResults game={game} isStarting={isStarting} onPlayAgain={startGame} />
+            </>
+          ) : (
+            <WordHuntBadges refreshKey={game.gameId} />
+          )}
+        </div>
         {errorMessage}
       </main>
     );

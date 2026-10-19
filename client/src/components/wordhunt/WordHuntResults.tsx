@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { WordHuntGame } from "@shared/types/wordhunt/WordHuntTypes";
+import { WordHuntLeaderboard } from "./WordHuntLeaderboard";
 
 interface WordHuntResultsProps {
   game: WordHuntGame;
@@ -43,6 +44,8 @@ export const WordHuntResults = ({ game, isStarting, onPlayAgain }: WordHuntResul
           <p className="p2">No words this time. Give it another try!</p>
         )}
       </div>
+
+      <WordHuntLeaderboard refreshKey={game.gameId} />
 
       <button type="button" className="btn wh-btn" onClick={onPlayAgain} disabled={isStarting}>
         {isStarting ? "Starting…" : "Play Again"}

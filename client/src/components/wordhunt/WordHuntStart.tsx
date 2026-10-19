@@ -1,3 +1,5 @@
+import { WordHuntLeaderboard } from "./WordHuntLeaderboard";
+
 interface WordHuntStartProps {
   isStarting: boolean;
   onStart: () => void;
@@ -16,6 +18,7 @@ export const WordHuntStart = ({ isStarting, onStart }: WordHuntStartProps) => {
           <li>You have 2 minutes. There's a new board every day!</li>
         </ul>
       </div>
+      <WordHuntLeaderboard />
       <button type="button" className="btn wh-btn" onClick={onStart} disabled={isStarting}>
         {isStarting ? "Starting…" : "Start Game"}
       </button>

@@ -136,7 +136,10 @@ describe("wordhunt routes", () => {
 
     expect(res.body.data.game.endReason).toBe("timeout");
     expect(visitor.updateDataObject).toHaveBeenCalledWith(
-      { [`${DATA_KEY}.wordhunt.game`]: expect.objectContaining({ endReason: "timeout" }) },
+      {
+        [`${DATA_KEY}.wordhunt.game`]: expect.objectContaining({ endReason: "timeout" }),
+        [`${DATA_KEY}.wordhunt.stats`]: expect.objectContaining({ gamesPlayed: 1 }),
+      },
       {},
     );
   });

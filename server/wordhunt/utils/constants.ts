@@ -58,3 +58,6 @@ export const LETTER_DICE = [
   ["N", "O", "O", "T", "U", "W"],
   ["O", "O", "O", "T", "T", "U"],
 ];
+
+// Number of players shown on the daily leaderboard.
+export const LEADERBOARD_SIZE = 10;

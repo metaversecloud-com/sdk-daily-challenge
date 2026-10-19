@@ -14,9 +14,10 @@
  */
 import http from "http";
 import { randomUUID } from "crypto";
-import { WordHuntGame, WordHuntSubmitResult } from "@shared/types/wordhunt/WordHuntTypes.js";
-import { getDailyBoard, getWordFromPath } from "../utils/board.js";
-import { getPointsForWord, GAME_DURATION_MS, MIN_WORD_LENGTH, SUBMISSION_GRACE_MS } from "../utils/constants.js";
+import { WordHuntGame, WordHuntStats, WordHuntSubmitResult } from "@shared/types/wordhunt/WordHuntTypes.js";
+import { buildBadgeList, getNewBadgeNames, recordFinishedGame } from "../utils/badges.js";
+import { getBoardDate, getDailyBoard, getWordFromPath } from "../utils/board.js";
+import { getPointsForWord, GAME_DURATION_MS, LEADERBOARD_SIZE, MIN_WORD_LENGTH, SUBMISSION_GRACE_MS } from "../utils/constants.js";
 import { isValidWord } from "../utils/dictionary.js";
 
 const PORT = 3000;
@@ -24,6 +25,39 @@ const GAME_DURATION = process.env.WORDHUNT_GAME_SECONDS ? Number(process.env.WOR
 
 // One game per visitorId, in memory.
 const games = new Map<string, WordHuntGame>();
+// Lifetime stats per visitorId, in memory (drives the Badges tab).
+const allStats = new Map<string, WordHuntStats>();
+
+const recordFinish = (visitorId: string, game: WordHuntGame) => {
+  const before = allStats.get(visitorId);
+  const after = recordFinishedGame(before, game);
+  allStats.set(visitorId, after);
+  return getNewBadgeNames(before, after);
+};
+
+// Today's best score per visitorId (leaderboard.ts needs the Topia SDK, so the mock keeps its own copy of the logic).
+const leaderboard = { date: "", scores: new Map<string, { name: string; score: number }>() };
+
+const recordScore = (visitorId: string, displayName: string, game: WordHuntGame) => {
+  const date = getBoardDate();
+  if (game.board.date !== date || game.score <= 0) return;
+  if (leaderboard.date !== date) {
+    leaderboard.date = date;
+    leaderboard.scores.clear();
+  }
+  if ((leaderboard.scores.get(visitorId)?.score ?? 0) < game.score) {
+    leaderboard.scores.set(visitorId, { name: displayName, score: game.score });
+  }
+};
+
+const getLeaderboard = (visitorId: string) => {
+  const date = getBoardDate();
+  const ranked = (leaderboard.date === date ? [...leaderboard.scores] : [])
+    .map(([profileId, { name, score }]) => ({ profileId, name, score }))
+    .sort((a, b) => b.score - a.score || a.name.localeCompare(b.name))
+    .map((entry, index) => ({ ...entry, rank: index + 1 }));
+  return { date, entries: ranked.slice(0, LEADERBOARD_SIZE), me: ranked.find((e) => e.profileId === visitorId) || null };
+};
 
 const sendJson = (res: http.ServerResponse, status: number, body: object) => {
   res.writeHead(status, { "Content-Type": "application/json" });
@@ -43,6 +77,7 @@ const server = http.createServer((req, res) => {
   req.on("end", () => {
     const url = new URL(req.url || "/", `http://localhost:${PORT}`);
     const visitorId = url.searchParams.get("visitorId") || "local";
+    const displayName = url.searchParams.get("displayName") || `Player ${visitorId}`;
     const body = rawBody ? JSON.parse(rawBody) : {};
     const board = getDailyBoard();
     let game = games.get(visitorId);
@@ -52,6 +87,14 @@ const server = http.createServer((req, res) => {
       case "GET /api/wordhunt/game-state":
         finalizeIfExpired(game);
         return ok({ board, game: game || null });
+
+      case "GET /api/wordhunt/leaderboard":
+        finalizeIfExpired(game);
+        if (game?.endedAt) recordScore(visitorId, displayName, game);
+        return ok(getLeaderboard(visitorId));
+
+      case "GET /api/wordhunt/badges":
+        return ok({ badges: buildBadgeList(allStats.get(visitorId)) });
 
       case "POST /api/wordhunt/start": {
         const isActive = game && !game.endedAt && Date.now() <= game.endsAt + SUBMISSION_GRACE_MS;
@@ -92,12 +135,15 @@ const server = http.createServer((req, res) => {
 
       case "POST /api/wordhunt/end": {
         if (!game || game.gameId !== body.gameId) return sendJson(res, 400, { success: false, error: "No game" });
+        let newBadges: string[] = [];
         if (!game.endedAt) {
           const now = Date.now();
           game.endedAt = Math.min(now, game.endsAt);
           game.endReason = now >= game.endsAt - 2000 ? "timeout" : "quit";
+          newBadges = recordFinish(visitorId, game);
+          recordScore(visitorId, displayName, game);
         }
-        return ok({ board, game });
+        return ok({ board, game, newBadges });
       }
 
       default:

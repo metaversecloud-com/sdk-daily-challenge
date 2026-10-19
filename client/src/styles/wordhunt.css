@@ -316,3 +316,148 @@ body:has(.wh-app) {
     transition: none;
   }
 }
+
+/* ---------- Leaderboard ---------- */
+
+.wh-leaderboard {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.wh-leaderboard th,
+.wh-leaderboard td {
+  padding: 4px 6px;
+  text-align: left;
+}
+
+.wh-leaderboard th:last-child,
+.wh-leaderboard td:last-child {
+  text-align: right;
+}
+
+.wh-leaderboard td:nth-child(2) {
+  overflow-wrap: anywhere;
+}
+
+.wh-leaderboard-me {
+  font-weight: 700;
+  background: var(--wh-panel-hover);
+}
+
+/* ---------- Tabs ---------- */
+
+.wh-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 4px;
+  background: var(--wh-panel);
+  border-radius: 16px;
+}
+
+.wh-tab {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--wh-navy);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wh-tab--active {
+  background: var(--wh-navy);
+  color: var(--wh-panel);
+}
+
+.wh-tab:focus-visible,
+.wh-badge:focus-visible {
+  outline: 3px solid var(--wh-focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Badges ---------- */
+
+.wh-badge-heading {
+  margin: 0 0 8px 4px;
+}
+
+.wh-badge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wh-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 4px;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background: var(--wh-panel);
+  color: var(--wh-navy);
+  font: inherit;
+  cursor: pointer;
+}
+
+.wh-badge img {
+  max-width: 100%;
+  height: auto;
+}
+
+.wh-badge--locked img {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.wh-badge--selected {
+  border-color: var(--wh-navy);
+}
+
+.wh-badge-name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.wh-badge-detail h2,
+.wh-badge-detail p {
+  margin: 0;
+}
+
+.wh-badge-detail .wh-badge-status {
+  margin-top: 6px;
+  font-weight: 700;
+}
+
+.wh-new-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wh-new-badges li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.wh-new-badges img {
+  width: 56px;
+  height: 56px;
+}

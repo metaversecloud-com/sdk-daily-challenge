@@ -32,6 +32,16 @@ Stored on the visitor data object under the per-world key from `getVisitor`:
 }
 ```
 
+### Daily leaderboard
+
+Stored on the dropped asset's data object (same pattern as the Escape Room leaderboard, `"name|score"` strings keyed by `profileId`):
+
+```
+dailyLeaderboard: { date: "YYYY-MM-DD", scores: { [profileId]: "displayName|score" } }
+```
+
+Each player keeps their best score of the day. A game is recorded when it ends (quit, timeout, or expired on the next load); the stored scores reset when the board date rolls over.
+
 ## API (`/api/wordhunt`)
 
 | Method | Path           | Body                 | Returns                                           |
@@ -40,9 +50,20 @@ Stored on the visitor data object under the per-world key from `getVisitor`:
 | POST   | `/start`       | –                    | New game (or resumes today's game if one is still running) |
 | POST   | `/submit-word` | `{ gameId, path }`   | `{ result, word, points, game, serverTime }`      |
 | POST   | `/end`         | `{ gameId }`         | Finished game (`endReason: "quit" \| "timeout"`)  |
+| GET    | `/leaderboard` | –                    | `{ date, entries, me }` — today's top 10 scores and the caller's own rank |
 
 All responses are `{ success: true, data }`.
 
 ## Not yet implemented (quality-of-life features)
 
-Board difficulty rating, badges, and the badges view.
+Board difficulty rating.
+
+## Badges
+
+12 badges, pictures in `client/public/badges/<slug>.png` (200x200). Source art, the generator (`badges/art/`) and the readability sheet are in `badges/`.
+
+- Lifetime stats are saved with each finished game at `wordhunt.stats` on the visitor data object (games played, total/best score, day streak, found "Topia", found a 7+ letter word). Earned badges are derived from them (`utils/badges.ts`), granted from the ecosystem inventory by badge **name** (`utils/grantBadges.ts`), and announced with a toast.
+- `GET /api/wordhunt/badges` returns the 12 badges with `earned` and `progress`. It also grants any earned badge missing from the player's inventory.
+- "Topia" is added to the dictionary so the word can be found.
+- **CROWN!** (top of the daily leaderboard) is not awarded yet: the leaderboard keeps no previous-day winner. It shows as earned once the badge is in the player's inventory.
+- Ecosystem badge item names must match `BADGES` in `utils/badges.ts`: 7-Day Streak, Amateur Hunter, Novice Hunter, Seasoned Hunter, 5K Scorer, 10K Scorer, 15K Scorer, 20K Scorer, 100K Hoarder, Topia Finder, Big Word Hunter, CROWN!
