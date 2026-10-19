@@ -1,20 +1,25 @@
 import { getVisitor } from "@utils/index.js";
-import { Credentials } from "../../types/Credentials"; // adjust to actual path in repo
+import { Credentials } from "../../types/index.js";
 import { WordQuestVisitorData } from "@shared/types/WordQuestTypes.js";
 import { pickDailyWord, getTodayDateString } from "@utils/wordquest/pickDailyWord.js";
 import { createDefaultStats, getYesterdayDateString } from "@utils/wordquest/stats.js";
+import { getAnswerPool } from "@utils/wordquest/answerPool.js";
 
-const buildKey = (urlSlug: string, sceneDropId: string) => `${urlSlug}-${sceneDropId}`;
+// WordQuest data lives under `${urlSlug}-${sceneDropId}.wordquest` on the visitor data object.
+// The per-world key is shared with other games (e.g. `.wordhunt`), so only ever write to the `.wordquest` path.
+type WordQuestDataObject = { [key: string]: { wordquest?: WordQuestVisitorData } | undefined };
+
+export const getWordQuestKey = ({ urlSlug, sceneDropId }: Credentials) => `${urlSlug}-${sceneDropId}`;
+export const getWordQuestPath = (credentials: Credentials) => `${getWordQuestKey(credentials)}.wordquest`;
 
 export const getWordQuestVisitorData = async (credentials: Credentials) => {
-  const { urlSlug, sceneDropId } = credentials;
-  const key = buildKey(urlSlug, sceneDropId);
+  const key = getWordQuestKey(credentials);
 
-  const { visitor } = await getVisitor(credentials, true);
+  const { visitor } = await getVisitor(credentials, true, { includeInventory: false });
 
-  const dataObject = await visitor.fetchDataObject();
+  const dataObject = (await visitor.fetchDataObject()) as WordQuestDataObject | undefined;
   const today = getTodayDateString();
-  const existing: WordQuestVisitorData | undefined = dataObject?.[key];
+  const existing = dataObject?.[key]?.wordquest;
 
   let wordQuestData: WordQuestVisitorData;
 
@@ -30,16 +35,16 @@ export const getWordQuestVisitorData = async (credentials: Credentials) => {
 
     wordQuestData = {
       date: today,
-      targetWord: pickDailyWord(today),
+      targetWord: pickDailyWord(today, await getAnswerPool(credentials)),
       guesses: [],
       status: "playing",
       stats,
     };
-    await visitor.setDataObject({ ...dataObject, [key]: wordQuestData});
+    await visitor.updateDataObject({ [getWordQuestPath(credentials)]: wordQuestData }, {});
   } else {
     // Handles data saved before stats existed
     wordQuestData = { ...existing, stats: existing.stats ?? createDefaultStats() };
   }
 
-  return { visitor, key, wordQuestData };
+  return { visitor, wordQuestData };
 };

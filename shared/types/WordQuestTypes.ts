@@ -32,3 +32,11 @@ export interface WordQuestVisitorData {
   status: "playing" | "won" | "lost";
   stats: WordQuestStatsData;
 }
+
+// One row of the WordQuest leaderboard (built by server/utils/wordquest/leaderboard.ts)
+export interface LeaderboardRow {
+  displayName: string;
+  wordsCorrect: number;
+  totalGuesses: number;
+  averageGuesses: number | null; // null until the player has solved a word
+}

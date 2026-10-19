@@ -25,9 +25,9 @@ router.get("/system/health", (req, res) => {
   });
 });
 
-router.get("/game-state", handleGetGameState);
-router.post("/guess", handleSubmitGuess);
-router.post("/reset", handleResetGame); 
+router.get("/wordquest/game-state", handleGetGameState);
+router.post("/wordquest/guess", handleSubmitGuess);
+router.post("/wordquest/reset", handleResetGame); // DEV ONLY
 
 router.use("/wordhunt", wordHuntRouter);
 

@@ -1,8 +1,8 @@
-import { WordleGameState } from "@shared/types/WordQuestTypes";
+import { WordQuestGameState } from "@shared/types/WordQuestTypes";
 import { WordQuestTile } from "./WordQuestTile";
 
 interface Props {
-  gameState: WordleGameState;
+  gameState: WordQuestGameState;
   currentGuess: string;
 }
 

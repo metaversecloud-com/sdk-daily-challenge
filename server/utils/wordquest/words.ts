@@ -1,15 +1,16 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 
 export const WORD_LENGTH = 5;
 export const MAX_GUESSES = 6;
 export const MAX_CUSTOM_ANSWERS = 500;
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+// The server is always started from the `server/` directory (dev, prod, Docker, and Jest), so the word lists are
+// resolved relative to the working directory. This avoids `import.meta.url`, which ts-jest (CommonJS) can't compile.
+const WORD_LIST_DIR = path.resolve(process.cwd(), "utils/wordquest");
 
 const loadList = (file: string): string[] => {
-  const fullPath = path.join(__dirname, file);
+  const fullPath = path.join(WORD_LIST_DIR, file);
   if (!fs.existsSync(fullPath)) return [];
   return fs
     .readFileSync(fullPath, "utf-8")

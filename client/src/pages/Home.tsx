@@ -1,100 +1,85 @@
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 
-import { PageContainer } from "@/components";
-import { GlobalStateContext } from "@/context/GlobalContext";
-import { backendAPI } from "@/utils";
-import { WordleGameState } from "@shared/types/WordQuestTypes";
-import { WordleBoard } from "@/components/wordquest/WordQuestBoard";
-import { WordQuestStats } from "@/components/wordquest/WordQuestStats";
-import "@/styles/wordquest/wordquest.css";
+// context
+import { GlobalDispatchContext } from "@/context/GlobalContext";
+import { SET_ERROR } from "@/context/types";
+
+// pages
+import { WordHunt } from "./wordhunt/WordHunt";
+import { WordQuestHome } from "./wordquest/WordQuestHome";
+
+type GameId = "wordhunt" | "wordquest";
+type Screen = "menu" | GameId;
+
+const GAMES: { id: GameId; name: string; description: string }[] = [
+  {
+    id: "wordhunt",
+    name: "Word Hunt",
+    description: "Connect touching letters to find as many words as you can before time runs out.",
+  },
+  {
+    id: "wordquest",
+    name: "WordQuest",
+    description: "Guess the secret five-letter word in six tries. There's a new word every day.",
+  },
+];
 
 export const Home = () => {
-  const { hasInteractiveParams } = useContext(GlobalStateContext);
+  const dispatch = useContext(GlobalDispatchContext);
 
-  const [gameState, setGameStateLocal] = useState<WordleGameState | null>(null);
-  const [currentGuess, setCurrentGuess] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [screen, setScreen] = useState<Screen>("menu");
 
+  const lastGameRef = useRef<GameId | null>(null);
+  const backButtonRef = useRef<HTMLButtonElement>(null);
+  const playButtonRefs = useRef<Partial<Record<GameId, HTMLButtonElement | null>>>({});
+
+  // Move focus into the new screen so keyboard and screen reader users aren't left on a button that no longer exists.
   useEffect(() => {
-    if (hasInteractiveParams) {
-      backendAPI
-        .get("/game-state")
-        .then((response) => setGameStateLocal(response.data.data))
-        .catch((err) => setError(err?.response?.data?.error || "Failed to load."))
-        .finally(() => setIsLoading(false));
-    }
-  }, [hasInteractiveParams]);
+    if (screen !== "menu") backButtonRef.current?.focus();
+    else if (lastGameRef.current) playButtonRefs.current[lastGameRef.current]?.focus();
+  }, [screen]);
 
-  const handleSubmitGuess = async () => {
-    if (!gameState) return;
-    try {
-      const response = await backendAPI.post("/guess", { guess: currentGuess });
-      setGameStateLocal(response.data.data);
-      setCurrentGuess("");
-      setError(null);
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Something went wrong.");
-    }
+  const changeScreen = (next: Screen) => {
+    // Errors are shared app-wide, so clear them so one game's error doesn't show up in the other.
+    dispatch?.({ type: SET_ERROR, payload: { error: "" } });
+    if (next !== "menu") lastGameRef.current = next;
+    setScreen(next);
   };
 
-  const handleReset = async () => {
-    try {
-      const response = await backendAPI.post("/reset");
-      setGameStateLocal(response.data.data);
-      setCurrentGuess("");
-      setError(null);
-    } catch (err: any) {
-      setError(err?.response?.data?.error || "Reset failed.");
-    }
-  };
+  if (screen === "menu") {
+    return (
+      <main className="gm-menu">
+        <h1 className="h2 gm-title">Daily Word Games</h1>
+        <p className="p2 gm-subtitle">Pick a game to play.</p>
+        <ul className="gm-list">
+          {GAMES.map((game) => (
+            <li key={game.id} className="card gm-card">
+              <h2 className="h3">{game.name}</h2>
+              <p className="p2">{game.description}</p>
+              <button
+                ref={(el) => (playButtonRefs.current[game.id] = el)}
+                type="button"
+                className="btn"
+                onClick={() => changeScreen(game.id)}
+              >
+                Play {game.name}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </main>
+    );
+  }
 
   return (
-    <PageContainer isLoading={isLoading} headerText="WordQuest">
-      {gameState && (
-        <div className="flex flex-col items-center gap-4 w-full">
-          <WordleBoard gameState={gameState} currentGuess={currentGuess} />
-
-          {gameState.status === "playing" ? (
-            <div className="flex gap-2 items-center">
-              <label htmlFor="guess-input" className="sr-only">
-                Enter your guess
-              </label>
-              <input
-                id="guess-input"
-                className="input"
-                value={currentGuess}
-                maxLength={gameState.wordLength}
-                onChange={(e) => setCurrentGuess(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmitGuess()}
-              />
-              <button type="button" className="btn wordquest-guess-btn" onClick={handleSubmitGuess}>
-                Guess
-              </button>
-            </div>
-          ) : (
-            <p className="p2" role="status">
-              {gameState.status === "won"
-                ? "You solved it! 🎉"
-                : `Out of guesses! The word was ${gameState.targetWord}.`}
-            </p>
-          )}
-
-          {gameState.status !== "playing" && <WordQuestStats stats={gameState.stats} />}
-
-          {error && (
-            <p className="p3" role="alert" style={{ color: "red" }}>
-              {error}
-            </p>
-          )}
-
-          {/* DEV ONLY — remove before shipping */}
-          <button type="button" className="btn btn-outline" onClick={handleReset}>
-            Reset (dev)
-          </button>
-        </div>
-      )}
-    </PageContainer>
+    <>
+      <nav className="gm-nav" aria-label="Games">
+        <button ref={backButtonRef} type="button" className="btn btn-outline gm-back" onClick={() => changeScreen("menu")}>
+          <span aria-hidden="true">← </span>All games
+        </button>
+      </nav>
+      {screen === "wordhunt" ? <WordHunt /> : <WordQuestHome />}
+    </>
   );
 };
 

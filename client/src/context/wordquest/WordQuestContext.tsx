@@ -1,9 +1,9 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
-import { WordleGameState } from "@shared/types/WordQuestTypes";
+import { WordQuestGameState } from "@shared/types/WordQuestTypes";
 import { fetchGameState, submitGuess } from "../../utils/wordquest/WordQuestAPI";
 
 interface WordleContextValue {
-  gameState: WordleGameState | null;
+  gameState: WordQuestGameState | null;
   currentGuess: string;
   setCurrentGuess: (val: string) => void;
   submitCurrentGuess: () => Promise<void>;
@@ -14,7 +14,7 @@ interface WordleContextValue {
 const WordleContext = createContext<WordleContextValue | undefined>(undefined);
 
 export const WordleProvider = ({ children }: { children: ReactNode }) => {
-  const [gameState, setGameState] = useState<WordleGameState | null>(null);
+  const [gameState, setGameState] = useState<WordQuestGameState | null>(null);
   const [currentGuess, setCurrentGuess] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);

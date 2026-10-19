@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { errorHandler, getCredentials } from "@utils/index.js";
-import { getWordQuestVisitorData } from "./getWordQuestVisitorData.js";
+import { getWordQuestPath, getWordQuestVisitorData } from "./getWordQuestVisitorData.js";
 import { evaluateGuess } from "@utils/wordquest/evaluateGuess.js";
 import { WORD_LIST, WORD_LENGTH, MAX_GUESSES } from "@utils/wordquest/words.js";
 import { WordQuestGameState } from "@shared/types/WordQuestTypes.js";
@@ -11,7 +11,7 @@ export const handleSubmitGuess = async (req: Request, res: Response) => {
     const credentials = getCredentials(req.query);
     const guess: string = (req.body.guess || "").toUpperCase();
 
-    const { visitor, key, wordQuestData } = await getWordQuestVisitorData(credentials);
+    const { visitor, wordQuestData } = await getWordQuestVisitorData(credentials);
 
     if (wordQuestData.status !== "playing") {
       return res.status(400).json({ success: false, error: "Today's puzzle is already complete." });
@@ -38,7 +38,7 @@ export const handleSubmitGuess = async (req: Request, res: Response) => {
         : recordGameResult(wordQuestData.stats, status === "won", guesses.length, wordQuestData.date);
 
     // 3. Save (targetWord stays stored internally)
-    await visitor.updateDataObject({ [key]: { ...wordQuestData, guesses, status, stats } });
+    await visitor.updateDataObject({ [getWordQuestPath(credentials)]: { ...wordQuestData, guesses, status, stats } }, {});
 
     // 4. Respond (only reveal targetWord once the game is over)
     const data: WordQuestGameState = {

@@ -1,12 +1,12 @@
 import { backendAPI } from "../backendAPI";
-import { WordleGameState } from "@shared/types/WordQuestTypes";
+import { WordQuestGameState } from "@shared/types/WordQuestTypes";
 
-export const fetchGameState = async (): Promise<WordleGameState> => {
-  const response = await backendAPI.get("/game-state");
+export const fetchGameState = async (): Promise<WordQuestGameState> => {
+  const response = await backendAPI.get("/wordquest/game-state");
   return response.data.data;
 };
 
-export const submitGuess = async (guess: string): Promise<WordleGameState> => {
-  const response = await backendAPI.post("/guess", { guess });
+export const submitGuess = async (guess: string): Promise<WordQuestGameState> => {
+  const response = await backendAPI.post("/wordquest/guess", { guess });
   return response.data.data;
 };
