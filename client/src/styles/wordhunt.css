@@ -1,0 +1,463 @@
+/*
+ * Word Hunt styles. Colors follow the Word Hunt design mock (light-blue page,
+ * cream panels, navy text, yellow selected tiles). Tokens live in tokens.css.
+ */
+
+body:has(.wh-app) {
+  margin: 0;
+  background: var(--wh-bg);
+}
+
+.wh-app {
+  min-height: 100vh;
+  padding: 12px 16px;
+  background: var(--wh-bg);
+  color: var(--wh-navy);
+  font-family: var(--wh-font);
+}
+
+.wh-app h1,
+.wh-app h2,
+.wh-app h3,
+.wh-app p,
+.wh-app li {
+  color: var(--wh-navy);
+  font-family: var(--wh-font);
+}
+
+/* ---------- Panels ---------- */
+
+.wh-panel {
+  background: var(--wh-panel);
+  border-radius: var(--wh-radius-panel);
+  padding: 16px 20px;
+}
+
+.wh-panel--grid {
+  padding: 10px;
+}
+
+/* ---------- Header ---------- */
+
+.wh-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.wh-timer {
+  font-size: 24px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  margin: 0;
+}
+
+.wh-timer--low {
+  color: var(--wh-error);
+}
+
+.wh-score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.wh-score-value {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Buttons ---------- */
+
+.rtsdk .wh-btn {
+  height: 44px;
+  max-height: none;
+  border-radius: 12px;
+  border-color: var(--wh-navy);
+  background: var(--wh-navy);
+  color: var(--wh-panel);
+  font-family: var(--wh-font);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.rtsdk .wh-btn:hover {
+  background: var(--wh-navy-hover);
+  border-color: var(--wh-navy-hover);
+}
+
+.rtsdk .wh-btn--outline {
+  background: var(--wh-panel);
+  color: var(--wh-navy);
+  border-width: 2px;
+}
+
+.rtsdk .wh-btn--outline:hover {
+  background: var(--wh-panel-hover);
+  color: var(--wh-navy);
+}
+
+.rtsdk .wh-btn--small {
+  width: auto;
+  min-width: 72px;
+}
+
+.wh-btn:focus-visible,
+.wh-tile:focus-visible .wh-tile-face {
+  outline: 3px solid var(--wh-focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Grid ---------- */
+
+.wh-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--wh-grid-size), 1fr);
+  aspect-ratio: 1;
+  /* Shrink the board on short screens so the whole game fits without scrolling.
+     The 220px floor keeps each tile at least 44px (minimum touch target). */
+  width: clamp(220px, calc(100vh - var(--wh-grid-reserved-height)), 360px);
+  max-width: 100%;
+  margin: 0 auto;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.wh-tile {
+  display: block;
+  margin: 0;
+  padding: 8%;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wh-tile:focus-visible {
+  outline: none;
+}
+
+.wh-tile:disabled {
+  cursor: default;
+}
+
+.wh-tile-face {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border: 3px solid var(--wh-tile-border);
+  border-radius: 8px;
+  background: var(--wh-panel);
+  color: var(--wh-tile-border);
+  font-family: var(--wh-font);
+  font-size: clamp(18px, 6.5vw, 28px);
+  font-weight: 800;
+  line-height: 1;
+  transition: background-color 80ms ease-out;
+}
+
+.wh-tile--selected .wh-tile-face {
+  background: var(--wh-tile-selected);
+}
+
+.wh-line {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  overflow: visible;
+}
+
+.wh-line polyline {
+  fill: none;
+  stroke: var(--wh-navy);
+  stroke-width: 0.12;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.9;
+}
+
+.wh-keyboard-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+/* ---------- Current word + feedback ---------- */
+
+.wh-word {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 56px;
+  margin-top: 14px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+  text-align: center;
+}
+
+.wh-word-text {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  word-break: break-all;
+}
+
+.wh-word-hint {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.wh-feedback {
+  min-height: 24px;
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.wh-app .wh-feedback--success {
+  color: var(--wh-success);
+}
+
+.wh-app .wh-feedback--error {
+  color: var(--wh-error);
+}
+
+/* ---------- Start + results ---------- */
+
+.wh-title {
+  margin: 8px 0 16px;
+  font-size: 32px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.wh-rules {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.wh-rules li {
+  margin-bottom: 6px;
+}
+
+.wh-results-score {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 800;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.wh-word-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wh-word-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--wh-divider);
+  font-weight: 700;
+}
+
+.wh-word-list li:last-child {
+  border-bottom: 0;
+}
+
+/* ---------- Modal ---------- */
+
+.rtsdk .wh-modal {
+  background: var(--wh-panel);
+  border-radius: var(--wh-radius-panel);
+}
+
+/* ---------- Motion ---------- */
+
+.wh-pop {
+  animation: wh-pop 220ms ease-out;
+}
+
+@keyframes wh-pop {
+  0% {
+    transform: scale(0.92);
+  }
+  60% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wh-pop {
+    animation: none;
+  }
+
+  .wh-tile-face {
+    transition: none;
+  }
+}
+
+/* ---------- Leaderboard ---------- */
+
+.wh-leaderboard {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.wh-leaderboard th,
+.wh-leaderboard td {
+  padding: 4px 6px;
+  text-align: left;
+}
+
+.wh-leaderboard th:last-child,
+.wh-leaderboard td:last-child {
+  text-align: right;
+}
+
+.wh-leaderboard td:nth-child(2) {
+  overflow-wrap: anywhere;
+}
+
+.wh-leaderboard-me {
+  font-weight: 700;
+  background: var(--wh-panel-hover);
+}
+
+/* ---------- Tabs ---------- */
+
+.wh-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 4px;
+  background: var(--wh-panel);
+  border-radius: 16px;
+}
+
+.wh-tab {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--wh-navy);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wh-tab--active {
+  background: var(--wh-navy);
+  color: var(--wh-panel);
+}
+
+.wh-tab:focus-visible,
+.wh-badge:focus-visible {
+  outline: 3px solid var(--wh-focus);
+  outline-offset: 2px;
+}
+
+/* ---------- Badges ---------- */
+
+.wh-badge-heading {
+  margin: 0 0 8px 4px;
+}
+
+.wh-badge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wh-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 4px;
+  border: 2px solid transparent;
+  border-radius: 16px;
+  background: var(--wh-panel);
+  color: var(--wh-navy);
+  font: inherit;
+  cursor: pointer;
+}
+
+.wh-badge img {
+  max-width: 100%;
+  height: auto;
+}
+
+.wh-badge--locked img {
+  filter: grayscale(1);
+  opacity: 0.55;
+}
+
+.wh-badge--selected {
+  border-color: var(--wh-navy);
+}
+
+.wh-badge-name {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.wh-badge-detail h2,
+.wh-badge-detail p {
+  margin: 0;
+}
+
+.wh-badge-detail .wh-badge-status {
+  margin-top: 6px;
+  font-weight: 700;
+}
+
+.wh-new-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wh-new-badges li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+
+.wh-new-badges img {
+  width: 56px;
+  height: 56px;
+}
