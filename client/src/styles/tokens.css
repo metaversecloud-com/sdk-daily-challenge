@@ -51,9 +51,7 @@
   --wh-grid-reserved-height: 282px;
 }
 
-/* Game menu (landing page) */
+/* Game menu (landing page); its other colors come from the Word Hunt tokens above */
 :root {
-  --gm-text: #1d4a72;
-  --gm-card-bg: #fcf5ee;
-  --gm-radius-card: 24px;
+  --gm-wordquest-bg: #ffffff;
 }

@@ -48,18 +48,18 @@ export const Home = () => {
 
   if (screen === "menu") {
     return (
-      <main className="gm-menu">
-        <h1 className="h2 gm-title">Daily Word Games</h1>
+      <main className="wh-app gm-menu">
+        <h1 className="wh-title">Daily Challenges</h1>
         <p className="p2 gm-subtitle">Pick a game to play.</p>
         <ul className="gm-list">
           {GAMES.map((game) => (
-            <li key={game.id} className="card gm-card">
+            <li key={game.id} className="wh-panel gm-card">
               <h2 className="h3">{game.name}</h2>
               <p className="p2">{game.description}</p>
               <button
                 ref={(el) => (playButtonRefs.current[game.id] = el)}
                 type="button"
-                className="btn"
+                className="btn wh-btn"
                 onClick={() => changeScreen(game.id)}
               >
                 Play {game.name}
@@ -72,14 +72,14 @@ export const Home = () => {
   }
 
   return (
-    <>
+    <div className={`gm-screen gm-screen--${screen}`}>
       <nav className="gm-nav" aria-label="Games">
-        <button ref={backButtonRef} type="button" className="btn btn-outline gm-back" onClick={() => changeScreen("menu")}>
+        <button ref={backButtonRef} type="button" className="btn wh-btn wh-btn--outline wh-btn--small" onClick={() => changeScreen("menu")}>
           <span aria-hidden="true">← </span>All games
         </button>
       </nav>
       {screen === "wordhunt" ? <WordHunt /> : <WordQuestHome />}
-    </>
+    </div>
   );
 };
 

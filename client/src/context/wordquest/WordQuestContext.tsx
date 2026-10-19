@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { WordQuestGameState } from "@shared/types/WordQuestTypes";
-import { fetchGameState, submitGuess } from "../../utils/wordquest/WordQuestAPI";
+import { fetchGameState, getWordQuestErrorMessage, submitGuess } from "../../utils/wordquest/WordQuestAPI";
 
 interface WordleContextValue {
   gameState: WordQuestGameState | null;
@@ -38,7 +38,7 @@ export const WordleProvider = ({ children }: { children: ReactNode }) => {
       setCurrentGuess("");
       setError(null);
     } catch (err: any) {
-      setError(err?.response?.data?.error || "Something went wrong.");
+      setError(getWordQuestErrorMessage(err, "Something went wrong."));
     }
   };
 

@@ -3,6 +3,7 @@ import { useContext, useEffect, useState } from "react";
 import { PageContainer } from "@/components";
 import { GlobalStateContext } from "@/context/GlobalContext";
 import { backendAPI } from "@/utils";
+import { getWordQuestErrorMessage } from "@/utils/wordquest/WordQuestAPI";
 import { WordQuestGameState } from "@shared/types/WordQuestTypes";
 import { WordleBoard } from "@/components/wordquest/WordQuestBoard";
 import { WordQuestStats } from "@/components/wordquest/WordQuestStats";
@@ -21,7 +22,7 @@ export const WordQuestHome = () => {
       backendAPI
         .get("/wordquest/game-state")
         .then((response) => setGameStateLocal(response.data.data))
-        .catch((err) => setError(err?.response?.data?.error || "Failed to load."))
+        .catch((err) => setError(getWordQuestErrorMessage(err, "Failed to load.")))
         .finally(() => setIsLoading(false));
     }
   }, [hasInteractiveParams]);
@@ -34,7 +35,7 @@ export const WordQuestHome = () => {
       setCurrentGuess("");
       setError(null);
     } catch (err: any) {
-      setError(err?.response?.data?.error || "Something went wrong.");
+      setError(getWordQuestErrorMessage(err, "Something went wrong."));
     }
   };
 
@@ -45,7 +46,7 @@ export const WordQuestHome = () => {
       setCurrentGuess("");
       setError(null);
     } catch (err: any) {
-      setError(err?.response?.data?.error || "Reset failed.");
+      setError(getWordQuestErrorMessage(err, "Reset failed."));
     }
   };
 
