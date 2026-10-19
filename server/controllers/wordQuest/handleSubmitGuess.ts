@@ -5,6 +5,7 @@ import { evaluateGuess } from "@utils/wordquest/evaluateGuess.js";
 import { WORD_LIST, WORD_LENGTH, MAX_GUESSES } from "@utils/wordquest/words.js";
 import { WordQuestGameState } from "@shared/types/WordQuestTypes.js";
 import { recordGameResult } from "@utils/wordquest/stats.js";
+import { recordLeaderboardResult } from "@utils/wordquest/leaderboard.js";
 
 export const handleSubmitGuess = async (req: Request, res: Response) => {
   try {
@@ -40,7 +41,17 @@ export const handleSubmitGuess = async (req: Request, res: Response) => {
     // 3. Save (targetWord stays stored internally)
     await visitor.updateDataObject({ [key]: { ...wordQuestData, guesses, status, stats } });
 
-    // 4. Respond (only reveal targetWord once the game is over)
+        // 4. Record the leaderboard result once the game has ended
+    if (status !== "playing") {
+      try {
+        await recordLeaderboardResult(credentials, status === "won", guesses.length);
+      } catch (error) {
+        // The game is already saved, so a leaderboard failure shouldn't fail the guess
+        errorHandler({ error, functionName: "handleSubmitGuess", message: "Error recording leaderboard result" });
+      }
+    }
+
+    // 5. Respond (only reveal targetWord once the game is over)
     const data: WordQuestGameState = {
       guesses,
       status,

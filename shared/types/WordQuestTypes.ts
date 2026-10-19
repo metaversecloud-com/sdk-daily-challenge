@@ -22,6 +22,7 @@ export interface WordQuestGameState {
   wordLength: number;
   targetWord?: string; // only present once status !== "playing"
   stats: WordQuestStatsData;
+  isAdmin?: boolean;
 }
 
 // Server-only: what's saved on the visitor's data object
@@ -31,4 +32,11 @@ export interface WordQuestVisitorData {
   guesses: GuessResult[];
   status: "playing" | "won" | "lost";
   stats: WordQuestStatsData;
+}
+
+export interface LeaderboardRow {
+  displayName: string;
+  wordsCorrect: number;
+  totalGuesses: number;  // guesses used across solved words
+  averageGuesses: number | null; // null until they solve one
 }
