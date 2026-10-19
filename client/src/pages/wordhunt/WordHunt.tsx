@@ -42,6 +42,9 @@ const FEEDBACK_MESSAGES: Record<Exclude<WordHuntSubmitResult, "valid">, string> 
   game_over: "Time's up!",
 };
 
+const isFinishedToday = ({ board, game }: WordHuntGameStateResponse) =>
+  !!game && !!game.endedAt && game.board.date === board.date;
+
 const formatTime = (ms: number) => {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}`;
@@ -88,7 +91,8 @@ export const WordHunt = () => {
         const data = response.data.data as WordHuntGameStateResponse;
         applyGameState(data);
         const isInProgress = data.game && !data.game.endedAt && data.game.endsAt > data.serverTime;
-        setPhase(isInProgress ? "playing" : "start");
+        // One game per daily board: a player who already finished today's game goes straight to their results.
+        setPhase(isInProgress ? "playing" : isFinishedToday(data) ? "results" : "start");
       })
       .catch((error) => {
         setErrorMessage(dispatch, error as ErrorType);
@@ -101,10 +105,16 @@ export const WordHunt = () => {
     setIsStarting(true);
     try {
       const response = await backendAPI.post("/wordhunt/start");
-      applyGameState(response.data.data);
+      const data = response.data.data as WordHuntGameStateResponse;
+      applyGameState(data);
+      setTab("play");
+      // The server returns today's finished game instead of a new one if the player has already played.
+      if (isFinishedToday(data)) {
+        setPhase("results");
+        return;
+      }
       isEndingRef.current = false;
       announcedRef.current = new Set();
-      setTab("play");
       setNewBadges([]);
       setFeedback(null);
       setCurrentWord("");
@@ -236,7 +246,7 @@ export const WordHunt = () => {
                   </button>
                 </div>
               )}
-              <WordHuntResults game={game} isStarting={isStarting} onPlayAgain={startGame} />
+              <WordHuntResults game={game} />
             </>
           ) : (
             <WordHuntBadges refreshKey={game.gameId} />

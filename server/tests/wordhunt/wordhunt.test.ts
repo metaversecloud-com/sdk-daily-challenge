@@ -157,6 +157,47 @@ describe("wordhunt routes", () => {
     expect(visitor.updateDataObject).toHaveBeenCalledWith({ [`${DATA_KEY}.wordhunt.game`]: game }, {});
   });
 
+  test("POST /wordhunt/start returns today's finished game instead of starting another", async () => {
+    const finishedGame = makeGame({
+      board: { ...testBoard, date: getBoardDate() },
+      endsAt: Date.now() - 60_000,
+      endedAt: Date.now() - 60_000,
+      endReason: "timeout",
+      score: 600,
+    });
+    const visitor = mockVisitorWithGame(finishedGame);
+    const res = await request(makeApp()).post("/api/wordhunt/start").query(baseCreds);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.game).toEqual(finishedGame);
+    expect(visitor.updateDataObject).not.toHaveBeenCalled();
+  });
+
+  test("POST /wordhunt/start finishes today's expired game and returns it instead of starting another", async () => {
+    const visitor = mockVisitorWithGame(
+      makeGame({ board: { ...testBoard, date: getBoardDate() }, endsAt: Date.now() - 60_000 }),
+    );
+    const res = await request(makeApp()).post("/api/wordhunt/start").query(baseCreds);
+
+    expect(res.body.data.game).toMatchObject({ gameId: "game-1", endReason: "timeout" });
+    expect(visitor.updateDataObject).toHaveBeenCalledWith(
+      {
+        [`${DATA_KEY}.wordhunt.game`]: expect.objectContaining({ gameId: "game-1", endReason: "timeout" }),
+        [`${DATA_KEY}.wordhunt.stats`]: expect.objectContaining({ gamesPlayed: 1 }),
+      },
+      {},
+    );
+  });
+
+  test("POST /wordhunt/start starts a new game when the last one was on an earlier day", async () => {
+    const visitor = mockVisitorWithGame(makeGame({ endedAt: Date.now() - 60_000, endReason: "timeout" }));
+    const res = await request(makeApp()).post("/api/wordhunt/start").query(baseCreds);
+
+    expect(res.body.data.game.gameId).not.toBe("game-1");
+    expect(res.body.data.game.endedAt).toBeNull();
+    expect(visitor.updateDataObject).toHaveBeenCalledWith({ [`${DATA_KEY}.wordhunt.game`]: res.body.data.game }, {});
+  });
+
   test("POST /wordhunt/submit-word awards points for a valid word", async () => {
     const visitor = mockVisitorWithGame(makeGame());
     const res = await request(makeApp())
