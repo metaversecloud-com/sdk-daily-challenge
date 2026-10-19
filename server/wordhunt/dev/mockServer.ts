@@ -98,6 +98,11 @@ const server = http.createServer((req, res) => {
 
       case "POST /api/wordhunt/start": {
         const isActive = game && !game.endedAt && Date.now() <= game.endsAt + SUBMISSION_GRACE_MS;
+        // One game per daily board: a finished game on today's board is returned instead of starting a new one.
+        if (game && game.board.date === board.date && !isActive) {
+          finalizeIfExpired(game);
+          return ok({ board, game });
+        }
         if (!isActive) {
           const now = Date.now();
           game = {

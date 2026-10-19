@@ -4,11 +4,9 @@ import { WordHuntLeaderboard } from "./WordHuntLeaderboard";
 
 interface WordHuntResultsProps {
   game: WordHuntGame;
-  isStarting: boolean;
-  onPlayAgain: () => void;
 }
 
-export const WordHuntResults = ({ game, isStarting, onPlayAgain }: WordHuntResultsProps) => {
+export const WordHuntResults = ({ game }: WordHuntResultsProps) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   // Move focus to the results so keyboard and screen reader users land on the summary.
@@ -41,15 +39,13 @@ export const WordHuntResults = ({ game, isStarting, onPlayAgain }: WordHuntResul
             ))}
           </ul>
         ) : (
-          <p className="p2">No words this time. Give it another try!</p>
+          <p className="p2">No words this time. Give it another try tomorrow!</p>
         )}
       </div>
 
       <WordHuntLeaderboard refreshKey={game.gameId} />
 
-      <button type="button" className="btn wh-btn" onClick={onPlayAgain} disabled={isStarting}>
-        {isStarting ? "Starting…" : "Play Again"}
-      </button>
+      <p className="wh-panel p2 text-center">You've played today's board. Come back tomorrow for a new one!</p>
     </div>
   );
 };
