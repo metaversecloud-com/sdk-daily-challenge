@@ -4,7 +4,12 @@ import { Credentials } from "../types/index.js";
 import { standardizeError } from "./standardizeError.js";
 import { VisitorDataObjectType } from "@shared/types/VisitorData.js";
 
-export const getVisitor = async (credentials: Credentials, shouldGetVisitorDetails = false) => {
+export const getVisitor = async (
+  credentials: Credentials,
+  shouldGetVisitorDetails = false,
+  options: { includeInventory?: boolean } = {},
+) => {
+  const { includeInventory = true } = options;
   try {
     const { sceneDropId, urlSlug, visitorId } = credentials;
 
@@ -31,9 +36,10 @@ export const getVisitor = async (credentials: Credentials, shouldGetVisitorDetai
       );
     }
 
-    await visitor.fetchInventoryItems();
     let visitorInventory: { [key: string]: { id: string; icon: string; name: string } } = {};
+    if (!includeInventory) return { visitor, visitorInventory };
 
+    await visitor.fetchInventoryItems();
     for (const visitorItem of visitor.inventoryItems) {
       const { id, status, item } = visitorItem;
       const { name, type, image_url = "" } = item || {};

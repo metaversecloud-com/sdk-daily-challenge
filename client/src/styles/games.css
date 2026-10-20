@@ -1,0 +1,58 @@
+/*
+ * Landing page where players pick between Word Hunt and WordQuest, plus the
+ * "All games" bar shown above each game. Colors, panels, title, and buttons
+ * reuse the Word Hunt classes (.wh-app, .wh-panel, .wh-title, .wh-btn) so the
+ * landing page always matches Word Hunt; this file only adds layout.
+ */
+
+.gm-menu {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.gm-subtitle {
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+.gm-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.gm-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.gm-card h2,
+.gm-card p {
+  margin: 0;
+}
+
+.gm-card .wh-btn {
+  margin-top: 4px;
+}
+
+.gm-nav {
+  padding: 12px 16px 0;
+}
+
+/*
+ * Word Hunt colors the whole page through `body:has(.wh-app)`, and browsers don't always repaint the page
+ * background when that stops matching. WordQuest gets its own full-height background so it never shows
+ * Word Hunt's blue after leaving the landing page or Word Hunt.
+ */
+body {
+  margin: 0;
+}
+
+.gm-screen--wordquest {
+  min-height: 100vh;
+  background: var(--gm-wordquest-bg);
+}

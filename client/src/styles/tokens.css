@@ -26,3 +26,32 @@
 *::after {
   box-sizing: border-box;
 }
+
+/* Word Hunt */
+:root {
+  --wh-font: "Inter", "Open Sans", sans-serif;
+
+  --wh-bg: #9dccf2;
+  --wh-panel: #fcf5ee;
+  --wh-panel-hover: #f3e9de;
+  --wh-navy: #1d4a72;
+  --wh-navy-hover: #2b5f8e;
+  --wh-tile-border: #222222;
+  --wh-tile-selected: #f9dc6e;
+  --wh-divider: #e3d9cd;
+  --wh-focus: #0a2540;
+
+  /* Darker than the mock's red/green so text meets WCAG AA (4.5:1) on the light-blue page. */
+  --wh-error: #8f1d1d;
+  --wh-success: #14512a;
+
+  --wh-radius-panel: 24px;
+
+  /* Height of everything on the game screen except the board (header, score, word, feedback, padding). */
+  --wh-grid-reserved-height: 282px;
+}
+
+/* Game menu (landing page); its other colors come from the Word Hunt tokens above */
+:root {
+  --gm-wordquest-bg: #ffffff;
+}
