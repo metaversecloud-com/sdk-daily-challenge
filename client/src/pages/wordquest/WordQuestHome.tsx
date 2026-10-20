@@ -5,7 +5,7 @@ import { GlobalStateContext } from "@/context/GlobalContext";
 import { backendAPI } from "@/utils";
 import { getWordQuestErrorMessage } from "@/utils/wordquest/WordQuestAPI";
 import { WordQuestGameState } from "@shared/types/WordQuestTypes";
-import { WordleBoard } from "@/components/wordquest/WordQuestBoard";
+import { WordQuestBoard }from "@/components/wordquest/WordQuestBoard";
 import { WordQuestStats } from "@/components/wordquest/WordQuestStats";
 import "@/styles/wordquest/wordquest.css";
 
@@ -54,7 +54,7 @@ export const WordQuestHome = () => {
     <PageContainer isLoading={isLoading} headerText="WordQuest">
       {gameState && (
         <div className="flex flex-col items-center gap-4 w-full">
-          <WordleBoard gameState={gameState} currentGuess={currentGuess} />
+          <WordQuestBoard gameState={gameState} currentGuess={currentGuess} />
 
           {gameState.status === "playing" ? (
             <div className="flex gap-2 items-center">

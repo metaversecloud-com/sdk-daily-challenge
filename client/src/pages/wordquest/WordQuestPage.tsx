@@ -1,5 +1,5 @@
 import { useWordle } from "../../context/wordquest/WordQuestContext";
-import { WordleBoard } from "../../components/wordquest/WordQuestBoard";
+import { WordQuestBoard} from "../../components/wordquest/WordQuestBoard";
 import "@/styles/wordquest/wordquest.css";
 
 export const WordlePage = () => {
@@ -12,7 +12,7 @@ export const WordlePage = () => {
     <div className="card flex flex-col items-center gap-4">
       <h1 className="h2">WordQuest</h1>
 
-      <WordleBoard gameState={gameState} currentGuess={currentGuess} />
+      <WordQuestBoard gameState={gameState} currentGuess={currentGuess} />
 
       {gameState.status === "playing" ? (
         <div className="flex gap-2">
