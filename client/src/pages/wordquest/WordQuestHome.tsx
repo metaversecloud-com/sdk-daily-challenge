@@ -110,9 +110,9 @@ export const WordQuestHome = () => {
           )}
 
           {/* DEV ONLY — remove before shipping */}
-          <button type="button" className="btn btn-outline" onClick={handleReset}>
+          {/* <button type="button" className="btn btn-outline" onClick={handleReset}>
             Reset (dev)
-          </button>
+          </button> */}
         </div>
       )}
 
