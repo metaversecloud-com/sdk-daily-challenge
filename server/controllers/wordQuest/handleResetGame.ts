@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { errorHandler, getCredentials } from "@utils/index.js";
-import { pickDailyWord, getTodayDateString } from "@utils/wordquest/pickDailyWord.js";
 import { getAnswerPool } from "@utils/wordquest/answerPool.js";
+import { pickDailyWord, getTodayDateString } from "@utils/wordquest/pickDailyWord.js";
 import { MAX_GUESSES, WORD_LENGTH } from "@utils/wordquest/words.js";
 import { WordQuestVisitorData, WordQuestGameState } from "@shared/types/WordQuestTypes.js";
 import { getWordQuestPath, getWordQuestVisitorData } from "./getWordQuestVisitorData.js";
@@ -14,9 +14,10 @@ export const handleResetGame = async (req: Request, res: Response) => {
     const { visitor, wordQuestData: existing } = await getWordQuestVisitorData(credentials);
 
     const today = getTodayDateString();
+    const pool = await getAnswerPool(credentials);
     const wordQuestData: WordQuestVisitorData = {
       date: today,
-      targetWord: pickDailyWord(today + Date.now(), await getAnswerPool(credentials)),
+      targetWord: pickDailyWord(today + Date.now(), pool),
       guesses: [],
       status: "playing",
       stats: existing.stats,

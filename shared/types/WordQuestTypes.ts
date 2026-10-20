@@ -22,6 +22,7 @@ export interface WordQuestGameState {
   wordLength: number;
   targetWord?: string; // only present once status !== "playing"
   stats: WordQuestStatsData;
+  isAdmin?: boolean;
 }
 
 // Server-only: what's saved on the visitor's data object
@@ -33,6 +34,7 @@ export interface WordQuestVisitorData {
   stats: WordQuestStatsData;
 }
 
+
 // One row of the WordQuest leaderboard (built by server/utils/wordquest/leaderboard.ts)
 export interface LeaderboardRow {
   displayName: string;
@@ -40,3 +42,4 @@ export interface LeaderboardRow {
   totalGuesses: number;
   averageGuesses: number | null; // null until the player has solved a word
 }
+

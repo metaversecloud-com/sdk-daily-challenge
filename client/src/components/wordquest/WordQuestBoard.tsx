@@ -6,7 +6,7 @@ interface Props {
   currentGuess: string;
 }
 
-export const WordleBoard = ({ gameState, currentGuess }: Props) => {
+export const WordQuestBoard = ({ gameState, currentGuess }: Props) => {
   const rows = [];
   for (let i = 0; i < gameState.maxGuesses; i++) {
     const guessRow = gameState.guesses[i];

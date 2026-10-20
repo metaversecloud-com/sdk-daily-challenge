@@ -1,9 +1,9 @@
 import { getVisitor } from "@utils/index.js";
 import { Credentials } from "../../types/index.js";
 import { WordQuestVisitorData } from "@shared/types/WordQuestTypes.js";
+import { getAnswerPool } from "@utils/wordquest/answerPool.js";
 import { pickDailyWord, getTodayDateString } from "@utils/wordquest/pickDailyWord.js";
 import { createDefaultStats, getYesterdayDateString } from "@utils/wordquest/stats.js";
-import { getAnswerPool } from "@utils/wordquest/answerPool.js";
 
 // WordQuest data lives under `${urlSlug}-${sceneDropId}.wordquest` on the visitor data object.
 // The per-world key is shared with other games (e.g. `.wordhunt`), so only ever write to the `.wordquest` path.
@@ -33,9 +33,10 @@ export const getWordQuestVisitorData = async (credentials: Credentials) => {
     // If they skipped a day, the streak is broken.
     if (stats.lastWonDate !== getYesterdayDateString()) stats.currentStreak = 0;
 
+    const pool = await getAnswerPool(credentials);
     wordQuestData = {
       date: today,
-      targetWord: pickDailyWord(today, await getAnswerPool(credentials)),
+      targetWord: pickDailyWord(today, pool),
       guesses: [],
       status: "playing",
       stats,
@@ -46,5 +47,5 @@ export const getWordQuestVisitorData = async (credentials: Credentials) => {
     wordQuestData = { ...existing, stats: existing.stats ?? createDefaultStats() };
   }
 
-  return { visitor, wordQuestData };
+  return { visitor, key, wordQuestData, isAdmin: visitor.isAdmin ?? false };
 };
