@@ -140,9 +140,11 @@ useEffect(() => {
           )}
 
           {/* DEV ONLY — remove before shipping */}
-          <button type="button" className="btn btn-outline" onClick={handleReset}>
-            Reset (dev)
-          </button>
+          {gameState.isAdmin && (
+            <button type="button" className="btn btn-outline" onClick={handleReset}>
+              Reset (dev)
+            </button>
+          )}
         </div>
       )}
 

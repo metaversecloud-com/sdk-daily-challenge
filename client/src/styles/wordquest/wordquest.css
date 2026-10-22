@@ -1,140 +1,163 @@
-:root {
-  --wq-bg: #a7cbee;
-  --wq-panel: #fbf5ef;
-  --wq-navy: #29496f;
-}
+/*
+ * WordQuest styles. Reuses the Word Hunt design tokens (tokens.css) so both games match.
+ * Fallback values are sampled from the Word Hunt mock.
+ */
 
-/* Page: light blue behind everything (this class is on the wrapper Home.tsx already renders) */
+/* Page: light blue behind the game (class is on the wrapper Home.tsx already renders) */
 .gm-screen--wordquest {
-  background: var(--wq-bg);
   min-height: 100vh;
-  color: var(--wq-navy);
+  background: var(--wh-bg, #a7cbee);
+  color: var(--wh-navy, #29496f);
+  font-family: var(--wh-font, inherit);
+}
+.gm-screen--wordquest h2,
+.gm-screen--wordquest h3,
+.gm-screen--wordquest p {
+  color: var(--wh-navy, #29496f);
+  font-family: var(--wh-font, inherit);
 }
 .gm-screen--wordquest h2 {
-  color: var(--wq-navy);
+  font-size: 32px;
   font-weight: 800;
   text-align: center;
 }
 
-/* Board card: cream rounded panel */
+/* ---------- Board ---------- */
+
 .wordquest-card {
-  background: var(--wq-panel);
-  border-radius: 28px;
-  padding: 1.25rem 1rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 6px;
   width: 100%;
+  padding: 16px 20px;
+  background: var(--wh-panel, #fbf5ef);
+  border-radius: var(--wh-radius-panel, 28px);
 }
-.wordquest-row { display: flex; gap: 0.4rem; }
+.wordquest-row { display: flex; gap: 6px; }
 
-/* Tiles */
 .wordquest-tile {
-  width: 2.75rem;
-  height: 2.75rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--wq-navy);
-  border-radius: 10px;
-  background: var(--wq-panel);
-  color: var(--wq-navy);
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--wh-tile-border, #29496f);
+  border-radius: 8px;
+  background: var(--wh-panel, #fbf5ef);
+  color: var(--wh-tile-border, #29496f);
+  font-family: var(--wh-font, inherit);
+  font-size: 22px;
   font-weight: 800;
-  font-size: 1.1rem;
+  line-height: 1;
   text-transform: uppercase;
 }
-.wordquest-tile-correct { background: #6bbf6b; color: var(--wq-navy); }
-.wordquest-tile-present { background: #f0c94e; color: var(--wq-navy); }
-.wordquest-tile-absent  { background: #d3d3d3; color: var(--wq-navy); }
+/* Guess feedback colors stay distinct; navy letters keep contrast on all three */
+.wordquest-tile-correct { background: #6bbf6b; color: var(--wh-navy, #29496f); }
+.wordquest-tile-present { background: #f0c94e; color: var(--wh-navy, #29496f); }
+.wordquest-tile-absent  { background: #d3d3d3; color: var(--wh-navy, #29496f); }
 
-/* Guess button: solid navy pill */
-.wordquest-guess-btn {
-  background: var(--wq-navy);
-  color: var(--wq-panel);
-  border: none;
-  border-radius: 20px;
-  font-weight: 800;
-}
-.wordquest-guess-btn:hover { background: #1f3a59; }
-.wordquest-guess-btn:disabled { opacity: 0.55; }
-.wordquest-guess-btn:focus-visible,
-.wordquest-stats-btn:focus-visible {
-  outline: 3px solid var(--wq-navy);
-  outline-offset: 2px;
+/* ---------- Buttons (same shape as .wh-btn) ---------- */
+
+.rtsdk .wordquest-guess-btn,
+.rtsdk .wordquest-stats-btn {
+  height: 44px;
+  max-height: none;
+  border-radius: 12px;
+  border: 2px solid var(--wh-navy, #29496f);
+  font-family: var(--wh-font, inherit);
+  font-weight: 700;
+  font-size: 16px;
 }
 
-/* Stats button: cream pill with navy outline */
-.wordquest-stats-btn {
+.rtsdk .wordquest-guess-btn {
+  background: var(--wh-navy, #29496f);
+  color: var(--wh-panel, #fbf5ef);
+}
+.rtsdk .wordquest-guess-btn:hover { background: var(--wh-navy-hover, #1f3a59); border-color: var(--wh-navy-hover, #1f3a59); }
+.rtsdk .wordquest-guess-btn:disabled { opacity: 0.55; }
+
+.rtsdk .wordquest-stats-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  background: var(--wq-panel);
-  color: var(--wq-navy);
-  border: 2px solid var(--wq-navy);
-  border-radius: 20px;
-  padding: 0.5rem 1.25rem;
-  font-weight: 800;
+  gap: 8px;
+  padding: 0 20px;
+  background: var(--wh-panel, #fbf5ef);
+  color: var(--wh-navy, #29496f);
 }
-.wordquest-stats-btn:hover { background: #fff; }
+.rtsdk .wordquest-stats-btn:hover { background: var(--wh-panel-hover, #fff); }
 .wordquest-stats-icon { width: 18px; height: 18px; }
 
-/* Messages */
-.wordquest-error { color: #b00020; }
-.wordquest-result { text-align: center; margin: 0; }
+.wordquest-guess-btn:focus-visible,
+.wordquest-stats-btn:focus-visible {
+  outline: 3px solid var(--wh-focus, #29496f);
+  outline-offset: 2px;
+}
 
-/* Stats popup */
+/* ---------- Messages ---------- */
+
+.wordquest-error { color: var(--wh-error, #b00020); }
+.wordquest-result { text-align: center; margin: 0; font-weight: 700; }
+
+/* ---------- Stats popup ---------- */
+
 .wordquest-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(41, 73, 111, 0.55);
+  z-index: 1000;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
-  z-index: 1000;
+  padding: 16px;
+  background: rgba(41, 73, 111, 0.55);
 }
 .wordquest-modal {
-  background: var(--wq-panel);
-  color: var(--wq-navy);
-  border-radius: 28px;
-  padding: 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
   width: 100%;
   max-width: 22rem;
   max-height: 90vh;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
+  padding: 24px 20px;
+  background: var(--wh-panel, #fbf5ef);
+  color: var(--wh-navy, #29496f);
+  border-radius: var(--wh-radius-panel, 28px);
 }
 .wordquest-modal-back { width: 100%; }
 
-/* Stats and leaderboard inside the popup */
 .wordquest-stats { width: 100%; max-width: 20rem; text-align: center; }
-.wordquest-stats-summary { display: flex; justify-content: space-between; margin: 0.5rem 0 1rem; }
-.wordquest-stats-summary dd { margin: 0; font-size: 1.5rem; font-weight: 800; }
-.wordquest-stats-summary dt { font-size: 0.7rem; }
-.wordquest-dist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.25rem; }
-.wordquest-dist li { display: flex; align-items: center; gap: 0.5rem; }
-.wordquest-dist-bar { background: var(--wq-navy); height: 1.25rem; min-width: 4px; border-radius: 4px; }
+.wordquest-stats-summary { display: flex; justify-content: space-between; margin: 8px 0 16px; }
+.wordquest-stats-summary dd { margin: 0; font-size: 24px; font-weight: 800; }
+.wordquest-stats-summary dt { font-size: 11px; font-weight: 600; }
+
+.wordquest-dist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; }
+.wordquest-dist li { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.wordquest-dist-bar { height: 20px; min-width: 4px; border-radius: 4px; background: var(--wh-navy, #29496f); }
+
+/* ---------- Leaderboard (same table style as .wh-leaderboard) ---------- */
 
 .wordquest-leaderboard { width: 100%; max-width: 20rem; }
-.wordquest-leaderboard h3 { text-align: center; margin: 0.5rem 0; }
-.wordquest-leaderboard table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
-.wordquest-leaderboard th { text-align: left; font-size: 0.7rem; padding-bottom: 0.25rem; }
+.wordquest-leaderboard h3 { text-align: center; margin: 8px 0; font-weight: 800; }
+.wordquest-leaderboard table { width: 100%; border-collapse: collapse; }
+.wordquest-leaderboard th,
+.wordquest-leaderboard td { padding: 4px 6px; text-align: left; }
 .wordquest-leaderboard th:not(:first-child),
 .wordquest-leaderboard td:not(:first-child) { text-align: right; }
-.wordquest-leaderboard td { padding: 0.25rem 0; border-top: 1px solid rgba(41, 73, 111, 0.2); }
+.wordquest-leaderboard td { border-top: 1px solid var(--wh-divider, rgba(41, 73, 111, 0.2)); font-weight: 600; }
+.wordquest-leaderboard th { font-size: 12px; }
+
+/* ---------- Motion ---------- */
 
 @media (prefers-reduced-motion: no-preference) {
   .wordquest-tile-correct,
   .wordquest-tile-present,
-  .wordquest-tile-absent { transition: background-color 0.2s ease; }
-  .wordquest-modal { animation: wordquest-pop 0.18s ease-out; }
+  .wordquest-tile-absent { transition: background-color 80ms ease-out; }
+  .wordquest-modal { animation: wordquest-pop 220ms ease-out; }
   @keyframes wordquest-pop {
-    from { opacity: 0; transform: scale(0.96); }
+    from { opacity: 0; transform: scale(0.92); }
     to { opacity: 1; transform: scale(1); }
   }
 }
