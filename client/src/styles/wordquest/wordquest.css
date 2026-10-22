@@ -164,3 +164,5 @@
 .wordquest-leaderboard th:not(:first-child),
 .wordquest-leaderboard td:not(:first-child) { text-align: right; }
 .wordquest-leaderboard td { padding: 0.25rem 0; border-top: 1px solid rgba(0, 0, 0, 0.12); }
+
+.wordquest-result { text-align: center; margin: 0; }

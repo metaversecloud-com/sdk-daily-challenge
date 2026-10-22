@@ -6,10 +6,12 @@ import { WordQuestLeaderboard } from "./wordQuestLeaderboard";
 
 interface Props {
   stats: WordQuestStatsData;
+  status: "playing" | "won" | "lost";
+  targetWord?: string;
   onClose: () => void;
 }
 
-export const WordQuestStatsModal = ({ stats, onClose }: Props) => {
+export const WordQuestStatsModal = ({ stats, status, targetWord, onClose }: Props) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLButtonElement>(null);
 
@@ -56,6 +58,16 @@ export const WordQuestStatsModal = ({ stats, onClose }: Props) => {
         aria-labelledby="stats-heading"
         onClick={(e) => e.stopPropagation()}
       >
+        {status === "lost" && targetWord && (
+          <p className="p2 wordquest-result" role="status">
+            Out of guesses! The word was <strong>{targetWord}</strong>.
+          </p>
+        )}
+        {status === "won" && (
+          <p className="p2 wordquest-result" role="status">
+            You solved it! 🎉
+          </p>
+        )}
         <WordQuestStats stats={stats} />
         <WordQuestLeaderboard />
         <button ref={backRef} type="button" className="btn wordquest-guess-btn wordquest-modal-back" onClick={onClose}>
