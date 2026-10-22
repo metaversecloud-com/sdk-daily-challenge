@@ -6,12 +6,15 @@ import { MAX_GUESSES, WORD_LENGTH } from "@utils/wordquest/words.js";
 import { WordQuestVisitorData, WordQuestGameState } from "@shared/types/WordQuestTypes.js";
 import { getWordQuestPath, getWordQuestVisitorData } from "./getWordQuestVisitorData.js";
 
+
 // DEV/TEST ONLY: remove this route before shipping.
 export const handleResetGame = async (req: Request, res: Response) => {
   try {
     const credentials = getCredentials(req.query);
-
-    const { visitor, wordQuestData: existing } = await getWordQuestVisitorData(credentials);
+    const { visitor, wordQuestData: existing, isAdmin } = await getWordQuestVisitorData(credentials);
+    if (!isAdmin) {
+      return res.status(403).json({ success: false, error: "Admins only." });
+    }
 
     const today = getTodayDateString();
     const pool = await getAnswerPool(credentials);

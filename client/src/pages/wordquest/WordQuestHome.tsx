@@ -36,6 +36,31 @@ export const WordQuestHome = () => {
     }
   }, [hasInteractiveParams]);
 
+  // Type on the physical keyboard; the letters show on the board
+  useEffect(() => {
+    if (!gameState || gameState.status !== "playing" || showStats) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      if (e.key === "Enter") {
+        // If a button has focus, let its own click handle Enter so it doesn't submit twice
+        if ((e.target as HTMLElement)?.tagName === "BUTTON") return;
+        if (currentGuess.length === gameState.wordLength) handleSubmitGuess();
+      } else if (e.key === "Backspace") {
+        setCurrentGuess((g) => g.slice(0, -1));
+      } else if (/^[a-zA-Z]$/.test(e.key)) {
+        setCurrentGuess((g) => (g.length < gameState.wordLength ? g + e.key.toUpperCase() : g));
+      } else {
+        return;
+      }
+      if (error) setError(null);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [gameState, currentGuess, showStats, error]);
+
   const handleSubmitGuess = async () => {
     if (!gameState) return;
     try {
@@ -44,7 +69,7 @@ export const WordQuestHome = () => {
       setGameStateLocal(next);
       setCurrentGuess("");
       setError(null);
-      // Open the stats popup when the game just ended
+      // Open stats automatically when the game just ended
       if (next.status !== "playing") setShowStats(true);
     } catch (err: any) {
       setError(getWordQuestErrorMessage(err, "Something went wrong."));
@@ -65,33 +90,31 @@ export const WordQuestHome = () => {
 
   return (
     <PageContainer isLoading={isLoading} headerText="WordQuest">
+      {error && !gameState && (
+        <p className="p3 wordquest-error" role="alert">
+          {error}
+        </p>
+      )}
+
       {gameState && (
         <div className="flex flex-col items-center gap-4 w-full">
           <WordQuestBoard gameState={gameState} currentGuess={currentGuess} />
 
-          {gameState.status === "playing" ? (
-            <div className="flex gap-2 items-center">
-              <label htmlFor="guess-input" className="sr-only">
-                Enter your guess
-              </label>
-              <input
-                id="guess-input"
-                className="input"
-                value={currentGuess}
-                maxLength={gameState.wordLength}
-                onChange={(e) => setCurrentGuess(e.target.value.toUpperCase().replace(/[^A-Z]/g, ""))}
-                onKeyDown={(e) => e.key === "Enter" && handleSubmitGuess()}
-              />
-              <button type="button" className="btn wordquest-guess-btn" onClick={handleSubmitGuess}>
+          {gameState.status === "playing" && (
+            <div className="flex flex-col items-center gap-2">
+              <p className="p3 sr-only" aria-live="polite">
+                Current guess: {currentGuess || "empty"}
+              </p>
+              <p className="p3">Type your guess, then press Enter.</p>
+              <button
+                type="button"
+                className="btn wordquest-guess-btn"
+                disabled={currentGuess.length !== gameState.wordLength}
+                onClick={handleSubmitGuess}
+              >
                 Guess
               </button>
             </div>
-          ) : (
-            <p className="p2" role="status">
-              {gameState.status === "won"
-                ? "You solved it! 🎉"
-                : `Out of guesses! The word was ${gameState.targetWord}.`}
-            </p>
           )}
 
           <button type="button" className="btn wordquest-stats-btn" onClick={() => setShowStats(true)}>
@@ -110,20 +133,22 @@ export const WordQuestHome = () => {
           )}
 
           {/* DEV ONLY — remove before shipping */}
-          {/* <button type="button" className="btn btn-outline" onClick={handleReset}>
-            Reset (dev)
-          </button> */}
+          {gameState.isAdmin && (
+            <button type="button" className="btn btn-outline" onClick={handleReset}>
+              Reset (dev)
+            </button>
+          )}
         </div>
       )}
 
-      {/* Shown even when the game failed to load, so the player isn't left with a blank screen */}
-      {!gameState && error && (
-        <p className="p3 wordquest-error" role="alert">
-          {error}
-        </p>
+      {showStats && gameState && (
+        <WordQuestStatsModal
+          stats={gameState.stats}
+          status={gameState.status}
+          targetWord={gameState.targetWord}
+          onClose={() => setShowStats(false)}
+        />
       )}
-
-      {showStats && gameState && <WordQuestStatsModal stats={gameState.stats} onClose={() => setShowStats(false)} />}
     </PageContainer>
   );
 };
