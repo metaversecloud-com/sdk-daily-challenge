@@ -3,7 +3,7 @@ import request from "supertest";
 
 import router from "../../wordhunt/routes.js";
 import { getBoardDate } from "../../wordhunt/utils/board.js";
-import { parseLeaderboard, recordDailyScore } from "../../wordhunt/utils/leaderboard.js";
+import { parseLeaderboard, recordDailyScore, tryIsDailyLeader } from "../../wordhunt/utils/leaderboard.js";
 
 jest.mock("@utils/index.js", () => ({
   errorHandler: jest.fn(({ error, res }: any) => res?.status(500).json({ success: false, error: String(error) })),
@@ -43,6 +43,28 @@ describe("parseLeaderboard", () => {
 
   test("handles missing data", () => {
     expect(parseLeaderboard(undefined)).toEqual([]);
+  });
+});
+
+describe("tryIsDailyLeader", () => {
+  test("is true for the top score on today's board, including a tie for first", async () => {
+    mockAsset({ date: today, scores: { p1: "Ann|900", p2: "Bob|600" } });
+    expect(await tryIsDailyLeader({ credentials, game: makeGame(900) })).toBe(true);
+
+    mockAsset({ date: today, scores: { p1: "Ann|900", p2: "Bob|900" } });
+    expect(await tryIsDailyLeader({ credentials: { ...credentials, profileId: "p2" }, game: makeGame(900) })).toBe(true);
+  });
+
+  test("is false below the top score, for an earlier day, or for a zero score", async () => {
+    mockAsset({ date: today, scores: { p1: "Ann|600", p2: "Bob|900" } });
+    expect(await tryIsDailyLeader({ credentials, game: makeGame(600) })).toBe(false);
+    expect(await tryIsDailyLeader({ credentials, game: makeGame(1200, "2020-01-01") })).toBe(false);
+    expect(await tryIsDailyLeader({ credentials, game: makeGame(0) })).toBe(false);
+  });
+
+  test("is false instead of throwing when the leaderboard can't be read", async () => {
+    mockGetDroppedAsset.mockRejectedValue(new Error("SDK down"));
+    expect(await tryIsDailyLeader({ credentials, game: makeGame(900) })).toBe(false);
   });
 });
 

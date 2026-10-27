@@ -71,6 +71,8 @@ export interface WordHuntStats {
   foundTopia: boolean;
   /** Found a word with 7 or more letters. */
   foundLongWord: boolean;
+  /** Finished a game with the top score on that day's leaderboard (earns the CROWN! badge). */
+  wonCrown: boolean;
 }
 
 export type WordHuntBadgeCategory = "play" | "score" | "special";

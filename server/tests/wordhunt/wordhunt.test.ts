@@ -15,7 +15,12 @@ jest.mock("@utils/getVisitor.js", () => ({
   getVisitor: jest.fn(),
 }));
 
+jest.mock("@utils/droppedAssets/getDroppedAsset.js", () => ({
+  getDroppedAsset: jest.fn(),
+}));
+
 const { getVisitor: mockGetVisitor } = jest.mocked(require("@utils/getVisitor.js"));
+const { getDroppedAsset: mockGetDroppedAsset } = jest.mocked(require("@utils/droppedAssets/getDroppedAsset.js"));
 
 const baseCreds = {
   assetId: "asset-123",
@@ -229,6 +234,17 @@ describe("wordhunt routes", () => {
     expect(visitor.updateDataObject).not.toHaveBeenCalled();
   });
 
+  test("POST /wordhunt/submit-word accepts TOPIA when it's on the board", async () => {
+    const topiaBoard = { ...testBoard, tiles: ["T", "O", "P", "I", "A", ...TEST_TILES.slice(5)] };
+    mockVisitorWithGame(makeGame({ board: topiaBoard }));
+    const res = await request(makeApp())
+      .post("/api/wordhunt/submit-word")
+      .query(baseCreds)
+      .send({ gameId: "game-1", path: [0, 1, 2, 3, 4] });
+
+    expect(res.body.data).toMatchObject({ result: "valid", word: "topia", points: 800 });
+  });
+
   test("POST /wordhunt/submit-word rejects words after the timer ends", async () => {
     mockVisitorWithGame(makeGame({ endsAt: Date.now() - 60_000 }));
     const res = await request(makeApp())
@@ -259,5 +275,38 @@ describe("wordhunt routes", () => {
     expect(res.body.data.game).toMatchObject({ endReason: "quit", score: 200, foundWords });
     expect(res.body.data.game.endedAt).not.toBeNull();
     expect(visitor.updateDataObject).toHaveBeenCalledTimes(1);
+  });
+
+  test("POST /wordhunt/end awards CROWN! when the player finishes at the top of today's leaderboard", async () => {
+    const visitor = mockVisitorWithGame(makeGame({ board: { ...testBoard, date: getBoardDate() }, score: 900 }));
+    // Today's leaderboard already has this player's 900 on top (as recorded when the game ends).
+    mockGetDroppedAsset.mockResolvedValue({
+      dataObject: { dailyLeaderboard: { date: getBoardDate(), scores: { p1: "Ann|900", p2: "Bob|600" } } },
+      updateDataObject: jest.fn().mockResolvedValue({}),
+    });
+    const res = await request(makeApp())
+      .post("/api/wordhunt/end")
+      .query({ ...baseCreds, profileId: "p1", displayName: "Ann" })
+      .send({ gameId: "game-1" });
+
+    expect(res.body.data.newBadges).toContain("CROWN!");
+    expect(visitor.updateDataObject).toHaveBeenCalledWith(
+      expect.objectContaining({ [`${DATA_KEY}.wordhunt.stats`]: expect.objectContaining({ wonCrown: true }) }),
+      {},
+    );
+  });
+
+  test("POST /wordhunt/end does not award CROWN! below the top score", async () => {
+    mockVisitorWithGame(makeGame({ board: { ...testBoard, date: getBoardDate() }, score: 600 }));
+    mockGetDroppedAsset.mockResolvedValue({
+      dataObject: { dailyLeaderboard: { date: getBoardDate(), scores: { p1: "Ann|600", p2: "Bob|900" } } },
+      updateDataObject: jest.fn().mockResolvedValue({}),
+    });
+    const res = await request(makeApp())
+      .post("/api/wordhunt/end")
+      .query({ ...baseCreds, profileId: "p1", displayName: "Ann" })
+      .send({ gameId: "game-1" });
+
+    expect(res.body.data.newBadges).not.toContain("CROWN!");
   });
 });
