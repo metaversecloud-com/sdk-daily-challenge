@@ -4,10 +4,11 @@ import { getWordQuestVisitorData } from "./getWordQuestVisitorData.js";
 import { WordQuestGameState } from "@shared/types/WordQuestTypes.js";
 import { MAX_GUESSES, WORD_LENGTH } from "@utils/wordquest/words.js";
 
+
 export const handleGetGameState = async (req: Request, res: Response) => {
   try {
     const credentials = getCredentials(req.query);
-    const { wordQuestData } = await getWordQuestVisitorData(credentials);
+    const { wordQuestData, isAdmin } = await getWordQuestVisitorData(credentials);
 
     const data: WordQuestGameState = {
       guesses: wordQuestData.guesses,
@@ -15,6 +16,7 @@ export const handleGetGameState = async (req: Request, res: Response) => {
       maxGuesses: MAX_GUESSES,
       wordLength: WORD_LENGTH,
       stats: wordQuestData.stats,
+      isAdmin,
       ...(wordQuestData.status !== "playing" && { targetWord: wordQuestData.targetWord }),
     };
 
