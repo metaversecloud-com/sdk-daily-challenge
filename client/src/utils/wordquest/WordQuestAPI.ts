@@ -2,7 +2,7 @@ import { backendAPI } from "../backendAPI";
 import { WordQuestGameState } from "@shared/types/WordQuestTypes";
 
 export const fetchGameState = async (): Promise<WordQuestGameState> => {
-  const response = await backendAPI.get("/wordquest/game-state");
+  const response = await backendAPI.get("/game-state", { params: { game: "wordquest" } });
   return response.data.data;
 };
 

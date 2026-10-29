@@ -42,7 +42,7 @@ export const WordQuestAnswerAdmin = () => {
     setBusy(true);
     try {
       const csv = await file.text();
-      const r = await backendAPI.post("/answers", { csv, fileName: file.name });
+      const r = await backendAPI.post("/wordquest/answers", { csv, fileName: file.name });
       const { count, fileName, rejected: skipped } = r.data.data;
       // Words aren't returned by the upload, so keep a placeholder array of the right length
       update({ ...data, customAnswers: new Array(count).fill(""), fileName });
@@ -62,7 +62,7 @@ export const WordQuestAnswerAdmin = () => {
     if (busy || !data) return;
     setBusy(true);
     try {
-      await backendAPI.delete("/answers");
+      await backendAPI.delete("/wordquest/answers");
       update({ ...data, customAnswers: [], fileName: null });
       setRejected([]);
       setIsError(false);

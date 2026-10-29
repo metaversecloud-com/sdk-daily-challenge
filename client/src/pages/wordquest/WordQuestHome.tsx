@@ -23,8 +23,9 @@ export const WordQuestHome = () => {
   useEffect(() => {
     if (hasInteractiveParams) {
       backendAPI
-        .get("/wordquest/game-state")
+        .get("/game-state", { params: { game: "wordquest" } })
         .then((response) => {
+           console.log("game-state response:", response.data);
           setGameStateLocal(response.data.data);
           // Makes PageContainer show the admin gear button
           setGameState(dispatch, { isAdmin: !!response.data.data.isAdmin });
