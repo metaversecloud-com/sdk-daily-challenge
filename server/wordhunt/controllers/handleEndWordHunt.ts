@@ -3,7 +3,6 @@ import { WordHuntGameStateResponse } from "@shared/types/wordhunt/WordHuntTypes.
 import { errorHandler, getCredentials } from "@utils/index.js";
 import { getDailyBoard } from "../utils/board.js";
 import { finishGame, getWordHuntVisitor } from "../utils/gameState.js";
-import { tryRecordDailyScore } from "../utils/leaderboard.js";
 
 // Ending within this window of the timer running out counts as a timeout rather than quitting early.
 const TIMEOUT_TOLERANCE_MS = 2000;
@@ -24,7 +23,6 @@ export const handleEndWordHunt = async (req: Request, res: Response) => {
       game.endedAt = Math.min(now, game.endsAt);
       game.endReason = now >= game.endsAt - TIMEOUT_TOLERANCE_MS ? "timeout" : "quit";
       newBadges = await finishGame({ credentials, visitor, game, stats });
-      await tryRecordDailyScore({ credentials, game });
     }
 
     const data: WordHuntGameStateResponse = { board: getDailyBoard(), game, serverTime: Date.now(), newBadges };

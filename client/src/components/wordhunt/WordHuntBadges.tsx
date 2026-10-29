@@ -16,6 +16,14 @@ const CATEGORIES: { id: WordHuntBadgeCategory; label: string }[] = [
   { id: "special", label: "Special" },
 ];
 
+const getBadgeStatus = (badge: WordHuntBadge) => {
+  if (badge.earned) return "Earned";
+  if (badge.progress) {
+    return `Locked: ${badge.progress.current.toLocaleString()} / ${badge.progress.target.toLocaleString()}`;
+  }
+  return "Locked";
+};
+
 interface WordHuntBadgesProps {
   /** Changing this value reloads the badges (e.g. after a game ends). */
   refreshKey?: string;
@@ -27,6 +35,8 @@ export const WordHuntBadges = ({ refreshKey }: WordHuntBadgesProps) => {
 
   const [badges, setBadges] = useState<WordHuntBadge[] | null>(null);
   const [selectedSlug, setSelectedSlug] = useState<string | null>(null);
+  // Tooltip the player closed with Escape; it stays hidden until they move to another badge.
+  const [dismissedTipSlug, setDismissedTipSlug] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hasInteractiveParams) return;
@@ -64,16 +74,10 @@ export const WordHuntBadges = ({ refreshKey }: WordHuntBadgesProps) => {
           <>
             <h2 className="h4">{selected.name}</h2>
             <p className="p2">{selected.description}</p>
-            <p className="p3 wh-badge-status">
-              {selected.earned
-                ? "Earned"
-                : selected.progress
-                  ? `Locked: ${selected.progress.current.toLocaleString()} / ${selected.progress.target.toLocaleString()}`
-                  : "Locked"}
-            </p>
+            <p className="p3 wh-badge-status">{getBadgeStatus(selected)}</p>
           </>
         ) : (
-          <p className="p2">Tap a badge to see how to earn it.</p>
+          <p className="p2">Tap or hover over a badge to see how to earn it.</p>
         )}
       </div>
 
@@ -86,19 +90,29 @@ export const WordHuntBadges = ({ refreshKey }: WordHuntBadgesProps) => {
             {badges
               .filter((badge) => badge.category === id)
               .map((badge) => (
-                <li key={badge.slug}>
+                <li
+                  key={badge.slug}
+                  className={`wh-badge-item ${badge.slug === dismissedTipSlug ? "wh-badge-item--tip-dismissed" : ""}`}
+                  onMouseLeave={() => setDismissedTipSlug(null)}
+                >
                   <button
                     type="button"
                     className={`wh-badge ${badge.earned ? "" : "wh-badge--locked"} ${
                       badge.slug === selectedSlug ? "wh-badge--selected" : ""
                     }`}
                     aria-pressed={badge.slug === selectedSlug}
+                    aria-describedby={`wh-badge-tip-${badge.slug}`}
                     onClick={() => setSelectedSlug(badge.slug)}
+                    onBlur={() => setDismissedTipSlug(null)}
+                    onKeyDown={(event) => event.key === "Escape" && setDismissedTipSlug(badge.slug)}
                   >
                     <img src={`/badges/${badge.slug}.png`} alt="" width={88} height={88} />
                     <span className="wh-badge-name">{badge.name}</span>
-                    <span className="sr-only">{badge.earned ? "Earned" : "Locked"}</span>
                   </button>
+                  <span id={`wh-badge-tip-${badge.slug}`} role="tooltip" className="wh-badge-tip p3">
+                    {badge.description}
+                    <span className="wh-badge-tip-status">{getBadgeStatus(badge)}</span>
+                  </span>
                 </li>
               ))}
           </ul>

@@ -3,7 +3,6 @@ import { WordHuntGameStateResponse } from "@shared/types/wordhunt/WordHuntTypes.
 import { errorHandler, getCredentials } from "@utils/index.js";
 import { getDailyBoard } from "../utils/board.js";
 import { finalizeIfExpired, finishGame, getWordHuntVisitor } from "../utils/gameState.js";
-import { tryRecordDailyScore } from "../utils/leaderboard.js";
 
 export const handleGetWordHuntState = async (req: Request, res: Response) => {
   try {
@@ -13,7 +12,6 @@ export const handleGetWordHuntState = async (req: Request, res: Response) => {
     const { visitor, game, stats } = await getWordHuntVisitor(credentials);
     if (finalizeIfExpired(game)) {
       await finishGame({ credentials, visitor, game: game!, stats });
-      await tryRecordDailyScore({ credentials, game: game! });
     }
 
     const data: WordHuntGameStateResponse = { board, game, serverTime: Date.now() };

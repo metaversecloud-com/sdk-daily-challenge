@@ -431,6 +431,51 @@ body:has(.wh-app) {
   text-align: center;
 }
 
+/* Requirements tooltip: shown on hover and keyboard focus, closed with Escape (WCAG 1.4.13). */
+.wh-badge-item {
+  position: relative;
+}
+
+.wh-badge-tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  z-index: 10;
+  width: 180px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--wh-navy);
+  color: var(--wh-panel);
+  text-align: center;
+  line-height: 1.3;
+  transform: translateX(-50%);
+  visibility: hidden;
+}
+
+/* Keep the tooltip inside the panel for badges in the outer columns. */
+.wh-badge-item:nth-child(3n + 1) .wh-badge-tip {
+  left: 0;
+  transform: none;
+}
+
+.wh-badge-item:nth-child(3n) .wh-badge-tip {
+  right: 0;
+  left: auto;
+  transform: none;
+}
+
+.wh-badge-tip-status {
+  display: block;
+  margin-top: 4px;
+  font-weight: 700;
+}
+
+/* A tooltip closed with Escape stays hidden until the pointer or focus moves to another badge. */
+.wh-badge-item:not(.wh-badge-item--tip-dismissed):hover .wh-badge-tip,
+.wh-badge-item:not(.wh-badge-item--tip-dismissed):has(.wh-badge:focus-visible) .wh-badge-tip {
+  visibility: visible;
+}
+
 .wh-badge-detail h2,
 .wh-badge-detail p {
   margin: 0;
