@@ -1,7 +1,8 @@
 import express from "express";
 import { handleGetGameState, handleSubmitGuess, handleResetGame, 
       handleClearAnswerList, handleSetAnswerList, handleGetAnswerList,
-      handleGetLeaderboard
+      handleGetLeaderboard, handleStartChallenge, handleSubmitChallengeGuess,
+      handleGetChallengeLeaderboard
     } from "./controllers/index.js";
 import { getVersion } from "@utils/getVersion.js";
 
@@ -28,11 +29,15 @@ router.get("/system/health", (req, res) => {
 });
 
 router.get("/game-state", handleGetGameState);
-router.post("/guess", handleSubmitGuess);
-router.post("/reset", handleResetGame); 
-router.get("/answers", handleGetAnswerList);
-router.post("/answers", handleSetAnswerList);
-router.delete("/answers", handleClearAnswerList);
-router.get("/leaderboard", handleGetLeaderboard);
+
+router.post("/wordquest/guess", handleSubmitGuess);
+router.post("/wordquest/reset", handleResetGame); // admin only
+router.get("/wordquest/answers", handleGetAnswerList);
+router.post("/wordquest/answers", handleSetAnswerList);
+router.delete("/wordquest/answers", handleClearAnswerList);
+router.get("/wordquest/leaderboard", handleGetLeaderboard);
+router.post("/wordquest/challenge/start", handleStartChallenge);
+router.post("/wordquest/challenge/guess", handleSubmitChallengeGuess);
+router.get("/wordquest/challenge/leaderboard", handleGetChallengeLeaderboard);
 
 export default router;

@@ -20,7 +20,7 @@ export const loadAnswerList = (): Promise<AnswerListData> => {
   if (cached) return Promise.resolve(cached);
   if (!inflight) {
     inflight = backendAPI
-      .get("/answers")
+      .get("/wordquest/answers")
       .then((r) => {
         cached = r.data.data as AnswerListData;
         return cached;

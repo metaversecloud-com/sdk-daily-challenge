@@ -1,25 +1,32 @@
 import { getVisitor } from "@utils/index.js";
-import { Credentials } from "../../types/Credentials"; 
+import { Credentials } from "../../types/Credentials";
 import { WordQuestVisitorData } from "@shared/types/WordQuestTypes.js";
 import { getAnswerPool } from "@utils/wordquest/answerPool.js";
 import { pickDailyWord, getTodayDateString } from "@utils/wordquest/pickDailyWord.js";
 import { createDefaultStats, getYesterdayDateString } from "@utils/wordquest/stats.js";
 
-const buildKey = (urlSlug: string, sceneDropId: string) => `${urlSlug}-${sceneDropId}`;
+type KeyParts = Pick<Credentials, "urlSlug" | "sceneDropId">;
+
+export const getWordQuestKey = ({ urlSlug, sceneDropId }: KeyParts) => `${urlSlug}-${sceneDropId}`;
+// Dot-path for updateDataObject. Only ever write here, never to the shared key itself.
+export const getWordQuestPath = (credentials: KeyParts) => `${getWordQuestKey(credentials)}.wordquest`;
+export const CHALLENGE_MODES = ["timed", "suddenDeath"] as const;
+export const getChallengeKey = (credentials: KeyParts, mode: (typeof CHALLENGE_MODES)[number]) =>
+  `${getWordQuestKey(credentials)}-challenge-${mode}`;
 
 export const getWordQuestVisitorData = async (credentials: Credentials) => {
-  const { urlSlug, sceneDropId } = credentials;
-  const key = buildKey(urlSlug, sceneDropId);
+  const key = getWordQuestKey(credentials);
 
   const { visitor } = await getVisitor(credentials, true);
 
   const dataObject = await visitor.fetchDataObject();
   const today = getTodayDateString();
-  const existing: WordQuestVisitorData | undefined = dataObject?.[key];
+  const existing: WordQuestVisitorData | undefined = dataObject?.[key]?.wordquest;
 
   let wordQuestData: WordQuestVisitorData;
 
   if (!existing || existing.date !== today) {
+     console.log("NEW-DAY BRANCH", { hadExisting: !!existing, existingDate: existing?.date, today });
     // Copy so we never mutate the stored object
     const stats = {
       ...(existing?.stats ?? createDefaultStats()),
@@ -37,11 +44,26 @@ export const getWordQuestVisitorData = async (credentials: Credentials) => {
       status: "playing",
       stats,
     };
-    await visitor.setDataObject({ ...dataObject, [key]: wordQuestData});
+
+    // Keep whatever else lives under this key (e.g. Word Hunt)
+    await visitor.updateDataObject({ [key]: { ...dataObject?.[key], wordquest: wordQuestData } })
   } else {
     // Handles data saved before stats existed
     wordQuestData = { ...existing, stats: existing.stats ?? createDefaultStats() };
   }
 
-  return { visitor, key, wordQuestData, isAdmin: visitor.isAdmin ?? false };
+    // Challenge runs live under their own top-level keys, stored as JSON strings
+  const challenge: NonNullable<WordQuestVisitorData["challenge"]> = {};
+  for (const mode of CHALLENGE_MODES) {
+    const raw = dataObject?.[getChallengeKey(credentials, mode)];
+    if (typeof raw === "string" && raw) {
+      try {
+        challenge[mode] = JSON.parse(raw);
+      } catch {
+        // ignore a corrupt run
+      }
+    }
+  }
+
+  return { visitor, key, wordQuestData: { ...wordQuestData, challenge }, isAdmin: visitor.isAdmin ?? false };
 };

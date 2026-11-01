@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import { backendAPI } from "@/utils";
 import { LeaderboardRow } from "@shared/types/WordQuestTypes";
+import { WordQuestChallengeLeaderboard } from "./WordQuestChallengeLeaderboard";
 
 export const WordQuestLeaderboard = () => {
   const [rows, setRows] = useState<LeaderboardRow[] | null>(null);
@@ -9,7 +10,7 @@ export const WordQuestLeaderboard = () => {
 
   useEffect(() => {
     backendAPI
-      .get("/leaderboard")
+      .get("/wordquest/leaderboard")
       .then((r) => setRows(r.data.data.rows))
       .catch(() => setFailed(true));
   }, []);

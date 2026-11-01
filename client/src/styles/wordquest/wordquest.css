@@ -161,3 +161,77 @@
     to { opacity: 1; transform: scale(1); }
   }
 }
+
+.wordquest-modes { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+.wordquest-mode-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+
+.wordquest-mode-card {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  text-align: left;
+  background: var(--wh-bg, #fbf5ef);
+  color: var(--wh-navy, #29496f);
+  border: 2px solid var(--wh-navy, #29496f);
+  border-radius: var(--wh-radius-panel, 16px);
+  cursor: pointer;
+}
+.wordquest-mode-card:focus-visible { outline: 3px solid var(--wh-navy, #29496f); outline-offset: 2px; }
+.wordquest-mode-title { font-weight: 700; font-size: 1.1rem; }
+.wordquest-mode-desc { font-size: 0.9rem; }
+
+.wordquest-challenge-intro { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+
+.wordquest-progress { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.wordquest-progress-list { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; }
+.wordquest-progress-item {
+  width: 28px; height: 28px; display: grid; place-items: center;
+  border: 2px solid var(--wh-navy, #29496f); border-radius: 50%;
+  color: var(--wh-navy, #29496f); background: var(--wh-bg, #fbf5ef); font-weight: 700; font-size: 0.85rem;
+}
+.wordquest-progress-item.is-current { background: var(--wh-navy, #29496f); color: var(--wh-bg, #fbf5ef); }
+.wordquest-progress-item.is-solved { background: var(--wh-panel, #a7cbee); }
+.wordquest-timer { margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--wh-navy, #29496f); font-variant-numeric: tabular-nums; }
+
+.wordquest-result {
+  width: 100%; padding: 14px 16px; text-align: center;
+  background: var(--wh-bg, #fbf5ef); color: var(--wh-navy, #29496f);
+  border: 2px solid var(--wh-navy, #29496f); border-radius: var(--wh-radius-panel, 16px);
+}
+.wordquest-result-words { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+
+.wordquest-challenge-leaderboard { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+.wordquest-lb-table { width: 100%; border-collapse: collapse; color: var(--wh-navy, #29496f); }
+.wordquest-lb-table th,
+.wordquest-lb-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--wh-panel, #a7cbee); }
+.wordquest-lb-table th { font-weight: 700; }
+.wordquest-lb-table td:nth-child(n + 3),
+.wordquest-lb-table th:nth-child(n + 3) { text-align: right; font-variant-numeric: tabular-nums; }
+
+.wordquest-lbmodal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(41, 73, 111, 0.45);
+}
+
+.wordquest-lbmodal {
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--wh-bg, #fbf5ef);
+  color: var(--wh-navy, #29496f);
+  border: 2px solid var(--wh-navy, #29496f);
+  border-radius: var(--wh-radius-panel, 16px);
+}

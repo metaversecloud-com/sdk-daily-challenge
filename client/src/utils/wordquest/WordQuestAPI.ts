@@ -7,6 +7,6 @@ export const fetchGameState = async (): Promise<WordleGameState> => {
 };
 
 export const submitGuess = async (guess: string): Promise<WordleGameState> => {
-  const response = await backendAPI.post("/guess", { guess });
+  const response = await backendAPI.post("/wordquest/guess", { guess });
   return response.data.data;
 };

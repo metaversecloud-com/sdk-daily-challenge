@@ -4,7 +4,9 @@ import { getAnswerPool } from "@utils/wordquest/answerPool.js";
 import { pickDailyWord, getTodayDateString } from "@utils/wordquest/pickDailyWord.js";
 import { MAX_GUESSES, WORD_LENGTH } from "@utils/wordquest/words.js";
 import { WordQuestVisitorData, WordQuestGameState } from "@shared/types/WordQuestTypes.js";
+import { saveWordQuestData } from "@utils/wordquest/saveWordQuestData.js";
 import { getWordQuestVisitorData } from "./getWordQuestVisitorData.js";
+import {getChallengeKey} from "./getWordQuestVisitorData.js";
 
 // DEV/TEST ONLY: remove this route before shipping.
 export const handleResetGame = async (req: Request, res: Response) => {
@@ -26,7 +28,11 @@ export const handleResetGame = async (req: Request, res: Response) => {
       stats: existing.stats,
     };
 
-    await visitor.updateDataObject({ [getWordQuestPath(credentials)]: wordQuestData }, {});
+    await saveWordQuestData(visitor, credentials, wordQuestData);
+    await visitor.updateDataObject({
+      [getChallengeKey(credentials, "timed")]: "",
+      [getChallengeKey(credentials, "suddenDeath")]: "",
+    });
 
     const data: WordQuestGameState = {
       guesses: [],
