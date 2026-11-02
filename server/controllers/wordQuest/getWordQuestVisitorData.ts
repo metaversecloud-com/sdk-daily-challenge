@@ -1,6 +1,6 @@
 import { getVisitor } from "@utils/index.js";
 import { Credentials } from "../../types/index.js";
-import { WordQuestVisitorData } from "@shared/types/WordQuestTypes.js";
+import { ChallengeMode, WordQuestVisitorData } from "@shared/types/WordQuestTypes.js";
 import { getAnswerPool } from "@utils/wordquest/answerPool.js";
 import { pickDailyWord, getTodayDateString } from "@utils/wordquest/pickDailyWord.js";
 import { createDefaultStats, getYesterdayDateString } from "@utils/wordquest/stats.js";
@@ -11,6 +11,8 @@ type WordQuestDataObject = { [key: string]: { wordquest?: WordQuestVisitorData }
 
 export const getWordQuestKey = ({ urlSlug, sceneDropId }: Credentials) => `${urlSlug}-${sceneDropId}`;
 export const getWordQuestPath = (credentials: Credentials) => `${getWordQuestKey(credentials)}.wordquest`;
+export const getChallengeKey = (credentials: Credentials, mode: ChallengeMode) =>
+  `${getWordQuestKey(credentials)}-challenge-${mode}`;
 
 export const getWordQuestVisitorData = async (credentials: Credentials) => {
   const key = getWordQuestKey(credentials);
