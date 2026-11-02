@@ -3,13 +3,20 @@
  * Fallback values are sampled from the Word Hunt mock.
  */
 
-/* Page: light blue behind the game (class is on the wrapper Home.tsx already renders) */
+html,
+body,
+#root {
+  min-height: 100vh;
+  background: var(--wh-bg, #a7cbee);
+}
+
 .gm-screen--wordquest {
   min-height: 100vh;
   background: var(--wh-bg, #a7cbee);
   color: var(--wh-navy, #29496f);
   font-family: var(--wh-font, inherit);
 }
+
 .gm-screen--wordquest h2,
 .gm-screen--wordquest h3,
 .gm-screen--wordquest p {
@@ -187,14 +194,28 @@
 .wordquest-progress { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .wordquest-progress-list { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; }
 .wordquest-progress-item {
-  width: 28px; height: 28px; display: grid; place-items: center;
-  border: 2px solid var(--wh-navy, #29496f); border-radius: 50%;
-  color: var(--wh-navy, #29496f); background: var(--wh-bg, #fbf5ef); font-weight: 700; font-size: 0.85rem;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--wh-navy, #29496f);
+  border-radius: 50%;
+  color: var(--wh-navy, #29496f);
+  background: var(--wh-panel, #fbf5ef);
+  font-weight: 700;
+  font-size: 0.85rem;
 }
-.wordquest-progress-item.is-current { background: var(--wh-navy, #29496f); color: var(--wh-bg, #fbf5ef); }
-.wordquest-progress-item.is-solved { background: var(--wh-panel, #a7cbee); }
-.wordquest-timer { margin: 0; font-size: 1.6rem; font-weight: 800; color: var(--wh-navy, #29496f); font-variant-numeric: tabular-nums; }
 
+/* the word you're on now: thicker ring */
+.wordquest-progress-item.is-current {
+  border-width: 4px;
+}
+
+/* solved: filled navy */
+.wordquest-progress-item.is-solved {
+  background: var(--wh-navy, #29496f);
+  color: var(--wh-panel, #fbf5ef);
+}
 .wordquest-result {
   width: 100%; padding: 14px 16px; text-align: center;
   background: var(--wh-bg, #fbf5ef); color: var(--wh-navy, #29496f);
@@ -234,4 +255,77 @@
   color: var(--wh-navy, #29496f);
   border: 2px solid var(--wh-navy, #29496f);
   border-radius: var(--wh-radius-panel, 16px);
+}
+
+.wordquest-back-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 6px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--wh-navy, #29496f);
+  background: var(--wh-panel, #fbf5ef);
+  border: 2px solid var(--wh-navy, #29496f);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.wordquest-challenge-header {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.wordquest-challenge-header h2 {
+  margin: 0;
+  text-align: center;
+}
+
+.wh-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 4px;
+  background: var(--wh-bg, #a7cbee);
+  border-radius: 16px;
+}
+
+.wh-tab {
+  flex: 1;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--wh-navy, #29496f);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wh-tab--active {
+  background: var(--wh-navy, #29496f);
+  color: var(--wh-panel, #fbf5ef);
+}
+
+.wh-word-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wh-word-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(41, 73, 111, 0.25);
+}
+
+.wh-word-list li:last-child {
+  border-bottom: 0;
 }

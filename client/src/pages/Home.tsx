@@ -113,9 +113,7 @@ export const Home = () => {
 
       {gameState && mode === "classic" && (
         <div className="flex flex-col items-center gap-4 w-full">
-          <button type="button" className="btn btn-outline" onClick={backToModes}>
-            All modes
-          </button>
+          <WordQuestBackButton onClick={backToModes} />
 
           <WordQuestBoard gameState={gameState} currentGuess={currentGuess} />
 

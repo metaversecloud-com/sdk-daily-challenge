@@ -3,6 +3,7 @@ import { backendAPI } from "@/utils";
 import type { ChallengeGameState, ChallengeMode, WordQuestGameState } from "@shared/types/WordQuestTypes";
 import { WordQuestBoard } from "../WordQuestBoard";
 import { WordQuestChallengeLeaderboardModal } from "./WordQuestChallengeLeaderboardModal";
+import { WordQuestBackButton } from "../WordQuestBackButton";
 
 const TITLES: Record<ChallengeMode, string> = { timed: "Timed", suddenDeath: "Sudden death" };
 const WARNING_SECONDS = [60, 30, 10];
@@ -28,6 +29,7 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
   const [announcement, setAnnouncement] = useState("");
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const announced = useRef<Set<number>>(new Set());
+  const prevStatus = useRef<string | null>(null);
 
   const applyState = useCallback((next: ChallengeGameState) => {
     setState(next);
@@ -48,6 +50,15 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Open the popup when a run has just ended (not when loading one that already ended)
+  useEffect(() => {
+    const status = state?.status ?? null;
+    if (prevStatus.current === "playing" && status && status !== "playing" && status !== "notStarted") {
+      setShowLeaderboard(true);
+    }
+    prevStatus.current = status;
+  }, [state?.status]);
 
   const handleStart = async () => {
     setIsBusy(true);
@@ -105,7 +116,7 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
     return () => clearInterval(id);
   }, [state, clockOffset, load]);
 
-  // Type on the physical keyboard (paused while the leaderboard popup is open)
+  // Type on the physical keyboard (paused while the popup is open)
   useEffect(() => {
     if (!state || state.status !== "playing" || showLeaderboard) return;
 
@@ -132,6 +143,7 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
   if (isLoading) return <p className="p3">Loading...</p>;
 
   const title = TITLES[mode];
+  const isOver = !!state && state.status !== "playing" && state.status !== "notStarted";
 
   const resultHeading = () => {
     if (!state) return "";
@@ -150,10 +162,10 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
 
   return (
     <div className="flex flex-col items-center gap-4 w-full">
-      <button type="button" className="btn btn-outline" onClick={onBack}>
-        All modes
-      </button>
-      <h2 className="h4">{title}</h2>
+      <div className="wordquest-challenge-header">
+        <WordQuestBackButton onClick={onBack} />
+        <h2 className="h4">{title}</h2>
+      </div>
 
       {error && (
         <p className="p3 wordquest-error" role="alert">
@@ -240,24 +252,6 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
               </button>
             </div>
           )}
-
-          {state.status !== "playing" && state.words && state.score && (
-            <section className="wordquest-result" aria-label="Result">
-              <h3 className="h4">{resultHeading()}</h3>
-              <p className="p3">
-                {state.score.wordsSolved} of {state.wordCount} solved in {state.score.totalGuesses}{" "}
-                {state.score.totalGuesses === 1 ? "guess" : "guesses"}
-                {state.score.timeLeftMs !== null && `, ${formatTime(state.score.timeLeftMs)} left`}
-              </p>
-              <ul className="wordquest-result-words">
-                {state.words.map((word, i) => (
-                  <li key={word}>
-                    <strong>{word}</strong> — {wordLabel(i)}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
         </>
       )}
 
@@ -274,13 +268,16 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
           <rect x="10" y="4" width="4" height="17" rx="1" fill="currentColor" />
           <rect x="17" y="9" width="4" height="12" rx="1" fill="currentColor" />
         </svg>
-        Leaderboard
+        {isOver ? "Results" : "Leaderboard"}
       </button>
 
       {showLeaderboard && (
         <WordQuestChallengeLeaderboardModal
           mode={mode}
           refreshKey={state?.status ?? "none"}
+          state={state}
+          resultHeading={resultHeading()}
+          wordLabel={wordLabel}
           onClose={() => setShowLeaderboard(false)}
         />
       )}
