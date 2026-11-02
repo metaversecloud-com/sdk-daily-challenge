@@ -1,9 +1,9 @@
 import { getVisitor } from "@utils/index.js";
 import { Credentials } from "../../types/Credentials";
 import { WordQuestVisitorData } from "@shared/types/WordQuestTypes.js";
-import { getAnswerPool } from "@utils/wordquest/answerPool.js";
-import { pickDailyWord, getTodayDateString } from "@utils/wordquest/pickDailyWord.js";
-import { createDefaultStats, getYesterdayDateString } from "@utils/wordquest/stats.js";
+import { getAnswerPool } from "../utils/answerPool.js";
+import { pickDailyWord, getTodayDateString } from "../utils/pickDailyWord.js";
+import { createDefaultStats, getYesterdayDateString } from "../utils/stats.js";
 
 type KeyParts = Pick<Credentials, "urlSlug" | "sceneDropId">;
 
@@ -19,7 +19,7 @@ export const getWordQuestVisitorData = async (credentials: Credentials) => {
 
   const { visitor } = await getVisitor(credentials, true);
 
-  const dataObject = await visitor.fetchDataObject();
+  const dataObject = (await visitor.fetchDataObject()) as Record<string, any> | undefined;
   const today = getTodayDateString();
   const existing: WordQuestVisitorData | undefined = dataObject?.[key]?.wordquest;
 
@@ -46,7 +46,7 @@ export const getWordQuestVisitorData = async (credentials: Credentials) => {
     };
 
     // Keep whatever else lives under this key (e.g. Word Hunt)
-    await visitor.updateDataObject({ [key]: { ...dataObject?.[key], wordquest: wordQuestData } })
+    await visitor.updateDataObject({ [key]: { ...dataObject?.[key], wordquest: wordQuestData } }, {});
   } else {
     // Handles data saved before stats existed
     wordQuestData = { ...existing, stats: existing.stats ?? createDefaultStats() };

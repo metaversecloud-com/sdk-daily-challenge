@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { backendAPI } from "@/utils";
 import type { ChallengeGameState, ChallengeMode, WordQuestGameState } from "@shared/types/WordQuestTypes";
-import { WordQuestBoard } from "./WordQuestBoard";
+import { WordQuestBoard } from "../WordQuestBoard";
 import { WordQuestChallengeLeaderboardModal } from "./WordQuestChallengeLeaderboardModal";
 
 const TITLES: Record<ChallengeMode, string> = { timed: "Timed", suddenDeath: "Sudden death" };

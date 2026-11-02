@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
 import { errorHandler, getCredentials } from "@utils/index.js";
 import { getWordQuestVisitorData } from "./getWordQuestVisitorData.js";
-import { evaluateGuess } from "@utils/wordquest/evaluateGuess.js";
-import { WORD_BANK_SET, WORD_LENGTH, MAX_GUESSES } from "@utils/wordquest/words.js";
+import { evaluateGuess } from "../utils/evaluateGuess.js";
+import { WORD_BANK_SET, WORD_LENGTH, MAX_GUESSES } from "../utils/words.js";
 import { WordQuestGameState } from "@shared/types/WordQuestTypes.js";
-import { recordGameResult } from "@utils/wordquest/stats.js";
-import { recordLeaderboardResult } from "@utils/wordquest/leaderboard.js";
-import { saveWordQuestData } from "@utils/wordquest/saveWordQuestData.js";
+import { recordGameResult } from "../utils/stats.js";
+import { recordLeaderboardResult } from "../utils/leaderboard.js";
+import { saveWordQuestData } from "../utils/saveWordQuestData.js";
 
 export const handleSubmitGuess = async (req: Request, res: Response) => {
   try {

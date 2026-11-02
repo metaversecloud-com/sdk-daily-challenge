@@ -5,9 +5,9 @@ import { GlobalStateContext, GlobalDispatchContext } from "@/context/GlobalConte
 import { backendAPI, setGameState } from "@/utils";
 import { WordQuestGameState } from "@shared/types/WordQuestTypes";
 import { WordQuestBoard } from "@/components/wordquest/WordQuestBoard";
-import { WordQuestStatsModal } from "@/components/wordquest/WordQuestStatsModal";
+import { WordQuestStatsModal } from "@/components/wordquest/stats/WordQuestStatsModal";
 import { WordQuestModes, WordQuestMode } from "@/components/wordquest/WordQuestModes";
-import { WordQuestChallenge } from "@/components/wordquest/WordQuestChallenge";
+import { WordQuestChallenge } from "@/components/wordquest/challenge/WordQuestChallenge";
 import "@/styles/wordquest/wordquest.css";
 import { loadAnswerList } from "@/components/wordquest/answerListCache";
 

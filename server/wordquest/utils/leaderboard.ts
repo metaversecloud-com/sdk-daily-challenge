@@ -13,7 +13,7 @@ export const recordLeaderboardResult = async (credentials: any, won: boolean, gu
   const displayName = cleanName(credentials.displayName);
 
   const droppedAsset = await getDroppedAsset(credentials);
-  const data = await droppedAsset.fetchDataObject();
+  const data = (await droppedAsset.fetchDataObject()) as Record<string, any> | undefined;
   const board: Record<string, string> | undefined = data?.leaderboard;
 
   const [, prevWords = "0", prevGuesses = "0"] = (board?.[profileId] ?? "").split("|");
@@ -23,15 +23,15 @@ export const recordLeaderboardResult = async (credentials: any, won: boolean, gu
 
   if (board) {
     // Only this player's entry is written
-    await droppedAsset.updateDataObject({ [`leaderboard.${profileId}`]: entry });
+    await droppedAsset.updateDataObject({ [`leaderboard.${profileId}`]: entry }, {});
   } else {
-    await droppedAsset.updateDataObject({ leaderboard: { [profileId]: entry } });
+    await droppedAsset.updateDataObject({ leaderboard: { [profileId]: entry } }, {});
   }
 };
 
 export const getLeaderboard = async (credentials: any, limit = 20): Promise<LeaderboardRow[]> => {
   const droppedAsset = await getDroppedAsset(credentials);
-  const data = await droppedAsset.fetchDataObject();
+  const data = (await droppedAsset.fetchDataObject()) as Record<string, any> | undefined;
   const board: Record<string, unknown> = data?.leaderboard ?? {};
 
   const rows: LeaderboardRow[] = Object.values(board)

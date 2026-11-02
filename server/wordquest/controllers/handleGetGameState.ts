@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { errorHandler, getCredentials } from "@utils/index.js";
-import { getWordQuestGameState } from "@utils/wordquest/getWordQuestGameState.js";
+import { getWordQuestGameState } from "../utils/getWordQuestGameState.js";
 
 export const handleGetGameState = async (req: Request, res: Response) => {
   try {

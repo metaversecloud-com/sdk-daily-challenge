@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
 import { errorHandler, getCredentials } from "@utils/index.js";
 import { getWordQuestVisitorData } from "./getWordQuestVisitorData.js";
-import { evaluateGuess } from "@utils/wordquest/evaluateGuess.js";
-import { WORD_BANK_SET, WORD_LENGTH } from "@utils/wordquest/words.js";
-import { getAnswerPool } from "@utils/wordquest/answerPool.js";
-import { getTodayDateString } from "@utils/wordquest/pickDailyWord.js";
-import { saveChallengeRun } from "@utils/wordquest/saveChallengeRun.js";
-import { getChallengeLeaderboard, tryRecordChallengeResult } from "@utils/wordquest/challengeLeaderboard.js";
+import { evaluateGuess } from "../utils/evaluateGuess.js";
+import { WORD_BANK_SET, WORD_LENGTH } from "../utils/words.js";
+import { getAnswerPool } from "../utils/answerPool.js";
+import { getTodayDateString } from "../utils/pickDailyWord.js";
+import { saveChallengeRun } from "../utils/challenge/saveChallengeRun.js";
+import { getChallengeLeaderboard, tryRecordChallengeResult } from "../utils/challenge/challengeLeaderboard.js";
 import {
   CHALLENGE_WORD_COUNT,
   advanceChallenge,
@@ -16,7 +16,7 @@ import {
   parseChallengeMode,
   pickChallengeWords,
   toChallengeView,
-} from "@utils/wordquest/challenge.js";
+} from "../utils/challenge/challenge.js";
 
 export const handleStartChallenge = async (req: Request, res: Response) => {
   try {

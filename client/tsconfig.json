@@ -30,6 +30,6 @@
       "@shared/*": ["../shared/*"]
     }
   },
-  "include": ["src", "../shared", "../server/utils/wordquest"],
+  "include": ["src", "../shared", "../server/utils/wordquest", "../server/wordquest/utils/challenge/challengeLeaderboard.ts", "../server/wordquest/utils/pickDailyWord.ts", "../server/wordquest/utils/challenge/saveChallengeRun.ts", "../server/wordquest/utils/challenge/challenge.ts", "../server/wordquest/utils/challenge/challengeRanking.ts", "../server/wordquest/utils/answerPool.ts", "../server/wordquest/utils/evaluateGuess.ts", "../server/wordquest/utils/getWordQuestGameState.ts", "../server/wordquest/utils/leaderboard.ts", "../server/wordquest/utils/parseAnswerCsv.ts", "../server/wordquest/utils/saveWordQuestData.ts", "../server/wordquest/utils/stats.ts", "../server/wordquest/utils/words.ts"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

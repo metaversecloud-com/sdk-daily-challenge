@@ -1,5 +1,5 @@
 import { getCredentials, getVisitor } from "@utils/index.js";
-import { getChallengeKey, getWordQuestVisitorData } from "../../controllers/wordQuest/getWordQuestVisitorData.js";
+import { getChallengeKey, getWordQuestVisitorData } from "../../controllers/getWordQuestVisitorData.js";
 import type { ChallengeMode, ChallengeRun, WordQuestVisitorData } from "@shared/types/WordQuestTypes.js";
 
 type Visitor = Awaited<ReturnType<typeof getWordQuestVisitorData>>["visitor"];
@@ -12,7 +12,7 @@ export const saveChallengeRun = async (
   run: ChallengeRun,
 ) => {
   const challengeKey = getChallengeKey(credentials, mode);
-  await visitor.updateDataObject({ [challengeKey]: JSON.stringify(run) });
+  await visitor.updateDataObject({ [challengeKey]: JSON.stringify(run) }, {});
 
   // TEMP: confirm it stuck
   const check = (await (await getVisitor(credentials, true)).visitor.fetchDataObject()) as any;

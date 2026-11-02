@@ -1,11 +1,11 @@
 import { Request } from "express";
 import { getCredentials } from "@utils/index.js";
-import { getWordQuestVisitorData } from "../../controllers/wordQuest/getWordQuestVisitorData.js";
+import { getWordQuestVisitorData } from "../controllers/getWordQuestVisitorData.js";
 import { MAX_GUESSES, WORD_LENGTH } from "./words.js";
 import { getTodayDateString } from "./pickDailyWord.js";
-import { finalizeIfExpired, getTodaysRun, parseChallengeMode, toChallengeView } from "./challenge.js";
-import { saveChallengeRun } from "./saveChallengeRun.js";
-import { tryRecordChallengeResult } from "./challengeLeaderboard.js";
+import { finalizeIfExpired, getTodaysRun, parseChallengeMode, toChallengeView } from "./challenge/challenge.js";
+import { saveChallengeRun } from "./challenge/saveChallengeRun.js";
+import { tryRecordChallengeResult } from "./challenge/challengeLeaderboard.js";
 
 export const getWordQuestGameState = async (
   credentials: ReturnType<typeof getCredentials>,

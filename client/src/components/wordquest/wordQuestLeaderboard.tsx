@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 
 import { backendAPI } from "@/utils";
 import { LeaderboardRow } from "@shared/types/WordQuestTypes";
-import { WordQuestChallengeLeaderboard } from "./WordQuestChallengeLeaderboard";
+import { WordQuestChallengeLeaderboard } from "./challenge/WordQuestChallengeLeaderboard";
 
 export const WordQuestLeaderboard = () => {
   const [rows, setRows] = useState<LeaderboardRow[] | null>(null);

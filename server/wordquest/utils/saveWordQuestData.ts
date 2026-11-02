@@ -1,5 +1,5 @@
 import { getCredentials } from "@utils/index.js";
-import { getWordQuestKey, getWordQuestVisitorData } from "../../controllers/wordQuest/getWordQuestVisitorData.js";
+import { getWordQuestKey, getWordQuestVisitorData } from "../controllers/getWordQuestVisitorData.js";
 import type { WordQuestVisitorData } from "@shared/types/WordQuestTypes.js";
 
 type Visitor = Awaited<ReturnType<typeof getWordQuestVisitorData>>["visitor"];
@@ -12,7 +12,7 @@ export const saveWordQuestData = async (
   wordQuestData: WordQuestVisitorData,
 ) => {
     const key = getWordQuestKey(credentials);
-    const dataObject = await visitor.fetchDataObject();
+    const dataObject = (await visitor.fetchDataObject()) as Record<string, any> | undefined;
     const { challenge: _challenge, ...rest } = wordQuestData; // challenge runs are stored separately
-    await visitor.updateDataObject({ [key]: { ...dataObject?.[key], wordquest: rest } });
+    await visitor.updateDataObject({ [key]: { ...dataObject?.[key], wordquest: rest } }, {});
 };

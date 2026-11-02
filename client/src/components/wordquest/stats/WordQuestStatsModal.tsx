@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { WordQuestStatsData } from "@shared/types/WordQuestTypes";
 import { WordQuestStats } from "./WordQuestStats";
-import { WordQuestLeaderboard } from "./wordQuestLeaderboard";
+import { WordQuestLeaderboard } from "../wordQuestLeaderboard";
 
 interface Props {
   stats: WordQuestStatsData;

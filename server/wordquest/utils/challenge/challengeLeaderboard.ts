@@ -25,12 +25,12 @@ export const recordChallengeResult = async (credentials: Credentials, run: Chall
   const best = existing && !isBetter(run.mode, result, existing) ? existing : result;
   const value = serializeEntry({ ...best, displayName, runs: (existing?.runs ?? 0) + 1 });
 
-  await droppedAsset.updateDataObject({ [`${key}.${profileId}`]: value });
+  await droppedAsset.updateDataObject({ [`${key}.${profileId}`]: value }, {});
 
   // Make sure it stuck. If not, rewrite the whole board under its top-level key.
   const check = (await droppedAsset.fetchDataObject()) as any;
   if (check?.[key]?.[profileId] !== value) {
-    await droppedAsset.updateDataObject({ [key]: { ...(check?.[key] ?? {}), [profileId]: value } });
+    await droppedAsset.updateDataObject({ [key]: { ...(check?.[key] ?? {}), [profileId]: value }, }, {});
   }
 };
 

@@ -4,8 +4,8 @@ import {
   ChallengeRun,
   WordQuestVisitorData,
 } from "@shared/types/WordQuestTypes.js";
-import { MAX_GUESSES, WORD_LENGTH } from "./words.js";
-import { pickDailyWord } from "./pickDailyWord.js";
+import { MAX_GUESSES, WORD_LENGTH } from "../words.js";
+import { pickDailyWord } from "../pickDailyWord.js";
 
 export const CHALLENGE_WORD_COUNT = 3; // change to 5 if you want
 export const TIMED_LIMIT_MS = 3 * 60 * 1000;
