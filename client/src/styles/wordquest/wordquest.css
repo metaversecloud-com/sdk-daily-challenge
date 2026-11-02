@@ -3,13 +3,6 @@
  * Fallback values are sampled from the Word Hunt mock.
  */
 
- html,
-body,
-#root {
-  min-height: 100vh;
-  background: var(--wh-bg, #a7cbee);
-}
-
 /* Page: light blue behind the game (class is on the wrapper Home.tsx already renders) */
 .gm-screen--wordquest {
   min-height: 100vh;
@@ -241,93 +234,4 @@ body,
   color: var(--wh-navy, #29496f);
   border: 2px solid var(--wh-navy, #29496f);
   border-radius: var(--wh-radius-panel, 16px);
-}
-
-.wordquest-back-btn {
-  align-self: flex-start;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  font-size: 0.95rem;
-  font-weight: 700;
-  line-height: 1.2;
-  color: var(--wh-navy, #29496f);
-  background: var(--wh-cream, #f1e8df);
-  border: 2px solid var(--wh-navy, #29496f);
-  border-radius: 12px;
-  cursor: pointer;
-}
-
-.wordquest-back-btn:hover {
-  background: var(--wh-bg, #fbf5ef);
-}
-
-.wordquest-back-btn:focus-visible {
-  outline: 3px solid var(--wh-navy, #29496f);
-  outline-offset: 3px;
-}
-
-/* Header: back button on its own row, title centered below */
-.wordquest-challenge-header {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-}
-
-.wordquest-challenge-header h2 {
-  margin: 0;
-  text-align: center;
-}
-
-/* Tabs in the results popup */
-.wh-tabs {
-  display: flex;
-  gap: 8px;
-  padding: 4px;
-  background: var(--wh-bg, #a7cbee);
-  border-radius: 16px;
-}
-
-.wh-tab {
-  flex: 1;
-  min-height: 44px;
-  border: 0;
-  border-radius: 12px;
-  background: transparent;
-  color: var(--wh-navy, #29496f);
-  font: inherit;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.wh-tab--active {
-  background: var(--wh-navy, #29496f);
-  color: var(--wh-panel, #fbf5ef);
-}
-
-.wh-tab:focus-visible {
-  outline: 3px solid var(--wh-navy, #29496f);
-  outline-offset: 2px;
-}
-
-/* Word list in the results tab */
-.wh-word-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.wh-word-list li {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(41, 73, 111, 0.25);
-}
-
-.wh-word-list li:last-child {
-  border-bottom: 0;
 }

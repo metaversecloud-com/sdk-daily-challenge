@@ -5,12 +5,11 @@ import { GlobalStateContext, GlobalDispatchContext } from "@/context/GlobalConte
 import { backendAPI, setGameState } from "@/utils";
 import { WordQuestGameState } from "@shared/types/WordQuestTypes";
 import { WordQuestBoard } from "@/components/wordquest/WordQuestBoard";
-import { WordQuestStatsModal } from "@/components/wordquest/stats/WordQuestStatsModal";
+import { WordQuestStatsModal } from "@/components/wordquest/WordQuestStatsModal";
 import { WordQuestModes, WordQuestMode } from "@/components/wordquest/WordQuestModes";
-import { WordQuestChallenge } from "@/components/wordquest/challenge/WordQuestChallenge";
+import { WordQuestChallenge } from "@/components/wordquest/WordQuestChallenge";
 import "@/styles/wordquest/wordquest.css";
 import { loadAnswerList } from "@/components/wordquest/answerListCache";
-import { WordQuestBackButton } from "@/components/wordquest/WordQuestBackButton";
 
 export const Home = () => {
   const { hasInteractiveParams } = useContext(GlobalStateContext);
@@ -114,7 +113,9 @@ export const Home = () => {
 
       {gameState && mode === "classic" && (
         <div className="flex flex-col items-center gap-4 w-full">
-            <WordQuestBackButton onClick={backToModes} />
+          <button type="button" className="btn btn-outline" onClick={backToModes}>
+            All modes
+          </button>
 
           <WordQuestBoard gameState={gameState} currentGuess={currentGuess} />
 
