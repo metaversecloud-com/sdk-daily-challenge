@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 import { errorHandler, getCredentials, getVisitor } from "@utils/index.js";
-import { getCustomAnswers, getCustomAnswerData, saveCustomAnswers } from "@utils/wordquest/answerPool.js";
-import { parseAnswerCsv } from "@utils/wordquest/parseAnswerCsv.js";
-import { DEFAULT_ANSWER_LIST, MAX_CUSTOM_ANSWERS } from "@utils/wordquest/words.js";
+import { getCustomAnswers, getCustomAnswerData, saveCustomAnswers } from "../utils/answerPool.js";
+import { parseAnswerCsv } from "../utils/parseAnswerCsv.js";
+import { DEFAULT_ANSWER_LIST, MAX_CUSTOM_ANSWERS } from "../utils/words.js";
 
 const MAX_CSV_CHARS = 50_000;
 

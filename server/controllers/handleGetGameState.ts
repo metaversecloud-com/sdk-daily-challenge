@@ -1,15 +1,15 @@
 import { Request, Response } from "express";
 import { errorHandler, getCredentials, getDroppedAsset, getVisitor, World } from "@utils/index.js";
 import { getWordHuntGameState } from "../wordhunt/utils/getWordHuntGameState.js"; // adjust to your folder
-import { getWordQuestGameState } from "../utils/wordquest/getWordQuestGameState.js";
+   import { getWordQuestGameState } from "../wordquest/utils/getWordQuestGameState.js";
 
 type Credentials = ReturnType<typeof getCredentials>;
 
 // One utility per challenge. Each returns that challenge's state.
-const challengeUtilities: Record<string, (credentials: Credentials) => Promise<object>> = {
-  wordhunt: getWordHuntGameState,
-  wordquest: getWordQuestGameState,
-};
+const challengeUtilities: Record<string, (credentials: Credentials, query: Request["query"]) => Promise<object>> = {
+     wordhunt: getWordHuntGameState,
+     wordquest: getWordQuestGameState,
+   };
 
 export const handleGetGameState = async (req: Request, res: Response) => {
   try {
@@ -36,7 +36,7 @@ export const handleGetGameState = async (req: Request, res: Response) => {
     const { visitor } = await getVisitor(credentials, true);
     const { isAdmin } = visitor;
 
-    const state = await challengeUtilities[game](credentials);
+    const state = await challengeUtilities[game](credentials, req.query);
 
     return res.json({ success: true, droppedAsset, isAdmin, data: { ...state, isAdmin } });
   } catch (error) {
