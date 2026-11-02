@@ -5,8 +5,8 @@ import { evaluateGuess } from "@utils/wordquest/evaluateGuess.js";
 import { WORD_BANK_SET, WORD_LENGTH } from "@utils/wordquest/words.js";
 import { getAnswerPool } from "@utils/wordquest/answerPool.js";
 import { getTodayDateString } from "@utils/wordquest/pickDailyWord.js";
-import { saveChallengeRun } from "@utils/wordquest/saveChallengeRun.js";
-import { getChallengeLeaderboard, tryRecordChallengeResult } from "@utils/wordquest/challengeLeaderboard.js";
+import { saveChallengeRun } from "@utils/wordquest/challenge/saveChallengeRun.js";
+import { getChallengeLeaderboard, tryRecordChallengeResult } from "@utils/wordquest/challenge/challengeLeaderboard.js";
 import {
   CHALLENGE_WORD_COUNT,
   advanceChallenge,
@@ -16,7 +16,7 @@ import {
   parseChallengeMode,
   pickChallengeWords,
   toChallengeView,
-} from "@utils/wordquest/challenge.js";
+} from "@utils/wordquest/challenge/challenge.js";
 
 export const handleStartChallenge = async (req: Request, res: Response) => {
   try {
