@@ -104,11 +104,10 @@ export const BADGES: BadgeDefinition[] = [
   {
     slug: "crown",
     name: "CROWN!",
-    description: "Be the top player on the daily leaderboard.",
+    description: "Finish a game at the top of the daily leaderboard.",
     category: "special",
-    // TODO: awarded outside of a game (the daily winner is only known once the day is over), so it is not
-    // derived from stats. It still shows as earned once the badge is in the player's inventory.
-    isEarned: () => false,
+    // Set by finishGame when the player's score is the highest on today's leaderboard (ties count).
+    isEarned: (s) => s.wonCrown,
   },
 ];
 
@@ -122,6 +121,7 @@ export const emptyStats = (): WordHuntStats => ({
   streak: { current: 0, best: 0, lastDate: null },
   foundTopia: false,
   foundLongWord: false,
+  wonCrown: false,
 });
 
 /** Whole days since 1970-01-01 for a YYYY-MM-DD board date. */
@@ -149,6 +149,8 @@ export const recordFinishedGame = (stats: WordHuntStats | undefined, game: WordH
     streak: { current, best, lastDate },
     foundTopia: previous.foundTopia || game.foundWords.some(({ word }) => word === TOPIA_WORD),
     foundLongWord: previous.foundLongWord || game.foundWords.some(({ word }) => word.length >= LONG_WORD_LENGTH),
+    // Leaderboard placement isn't part of the game itself, so finishGame sets this after recording the score.
+    wonCrown: previous.wonCrown,
   };
 };
 

@@ -28,9 +28,12 @@ const games = new Map<string, WordHuntGame>();
 // Lifetime stats per visitorId, in memory (drives the Badges tab).
 const allStats = new Map<string, WordHuntStats>();
 
+// Call after recordScore so the CROWN! check sees this game on today's leaderboard.
 const recordFinish = (visitorId: string, game: WordHuntGame) => {
   const before = allStats.get(visitorId);
   const after = recordFinishedGame(before, game);
+  const top = getLeaderboard(visitorId).entries[0];
+  if (game.board.date === getBoardDate() && game.score > 0 && top && game.score >= top.score) after.wonCrown = true;
   allStats.set(visitorId, after);
   return getNewBadgeNames(before, after);
 };
@@ -145,8 +148,8 @@ const server = http.createServer((req, res) => {
           const now = Date.now();
           game.endedAt = Math.min(now, game.endsAt);
           game.endReason = now >= game.endsAt - 2000 ? "timeout" : "quit";
-          newBadges = recordFinish(visitorId, game);
           recordScore(visitorId, displayName, game);
+          newBadges = recordFinish(visitorId, game);
         }
         return ok({ board, game, newBadges });
       }

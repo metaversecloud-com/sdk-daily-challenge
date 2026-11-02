@@ -9,7 +9,7 @@ export const WordQuestLeaderboard = () => {
 
   useEffect(() => {
     backendAPI
-      .get("/leaderboard")
+      .get("/wordquest/leaderboard")
       .then((r) => setRows(r.data.data.rows))
       .catch(() => setFailed(true));
   }, []);

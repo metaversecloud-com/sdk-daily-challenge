@@ -1,15 +1,30 @@
 import { Request, Response } from "express";
 import { errorHandler, getCredentials, getDroppedAsset, getVisitor, World } from "@utils/index.js";
-import axios from "axios";
+import { getWordHuntGameState } from "../wordhunt/utils/getWordHuntGameState.js"; // adjust to your folder
+   import { getWordQuestGameState } from "../wordquest/utils/getWordQuestGameState.js";
+
+type Credentials = ReturnType<typeof getCredentials>;
+
+// One utility per challenge. Each returns that challenge's state.
+const challengeUtilities: Record<string, (credentials: Credentials, query: Request["query"]) => Promise<object>> = {
+     wordhunt: getWordHuntGameState,
+     wordquest: getWordQuestGameState,
+   };
 
 export const handleGetGameState = async (req: Request, res: Response) => {
   try {
     const credentials = getCredentials(req.query);
-    const { assetId, displayName, interactiveNonce, interactivePublicKey, profileId, urlSlug, visitorId } = credentials;
 
+    // Defaults to wordhunt so the existing Word Hunt client keeps working unchanged
+    const game = typeof req.query.game === "string" ? req.query.game : "wordhunt";
+    if (!Object.hasOwn(challengeUtilities, game)) {
+      return res.status(400).json({ success: false, error: "Unknown game." });
+    }
+
+    // Shared for every challenge
     const droppedAsset = await getDroppedAsset(credentials);
 
-    const world = World.create(urlSlug, { credentials });
+    const world = World.create(credentials.urlSlug, { credentials });
     world.triggerParticle({ name: "Sparkle", duration: 3, position: droppedAsset.position }).catch((error: any) =>
       errorHandler({
         error,
@@ -21,39 +36,14 @@ export const handleGetGameState = async (req: Request, res: Response) => {
     const { visitor } = await getVisitor(credentials, true);
     const { isAdmin } = visitor;
 
-    try {
-      await axios.post(
-        `${process.env.LEADERBOARD_BASE_URL || "http://v2lboard0-prod-topia.topia-rtsdk.com"}/api/dropped-asset/increment-player-stats?assetId=${assetId}&displayName=${displayName}&interactiveNonce=${interactiveNonce}&interactivePublicKey=${interactivePublicKey}&profileId=${profileId}&urlSlug=${urlSlug}&visitorId=${visitorId}`,
-        {
-          publicKey: interactivePublicKey,
-          secret: process.env.INTERACTIVE_SECRET,
-          profileId,
-          displayName,
-          incrementBy: 1,
-        },
-      );
-    } catch (error) {
-      errorHandler({
-        error,
-        functionName: "handleGetGameState",
-        message: "Error posting player stats to Leaderboard",
-      });
-    }
+    const state = await challengeUtilities[game](credentials, req.query);
 
-    await world.fireToast({ title: "Nice Work!", text: "You've successfully completed the task!" }).catch((error) =>
-      errorHandler({
-        error,
-        functionName: "handleGetGameState",
-        message: "Error firing toast in world",
-      }),
-    );
-
-    return res.json({ droppedAsset, isAdmin, success: true });
+    return res.json({ success: true, droppedAsset, isAdmin, data: { ...state, isAdmin } });
   } catch (error) {
     return errorHandler({
       error,
-      functionName: "getDroppedAssetDetails",
-      message: "Error getting dropped asset instance and data object",
+      functionName: "handleGetGameState",
+      message: "Error getting game state",
       req,
       res,
     });

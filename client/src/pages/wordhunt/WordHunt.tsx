@@ -86,7 +86,7 @@ export const WordHunt = () => {
   useEffect(() => {
     if (!hasInteractiveParams) return;
     backendAPI
-      .get("/wordhunt/game-state")
+      .get("/game-state", { params: { game: "wordhunt" } })
       .then((response) => {
         const data = response.data.data as WordHuntGameStateResponse;
         applyGameState(data);

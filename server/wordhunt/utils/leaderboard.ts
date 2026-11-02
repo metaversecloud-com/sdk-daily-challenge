@@ -75,6 +75,21 @@ export const recordDailyScore = async ({ credentials, game }: { credentials: Cre
   }
 };
 
+/**
+ * Whether a finished game has the top score on today's leaderboard (a tie for first counts).
+ * Call after the game's score has been recorded. Never throws: returns false if the leaderboard can't be read.
+ */
+export const tryIsDailyLeader = async ({ credentials, game }: { credentials: Credentials; game: WordHuntGame }) => {
+  try {
+    if (game.board.date !== getBoardDate() || game.score <= 0) return false;
+    const { entries } = await getDailyLeaderboard(credentials);
+    return entries.length > 0 && game.score >= entries[0].score;
+  } catch (error) {
+    errorHandler({ error, functionName: "tryIsDailyLeader", message: "Error checking the Word Hunt daily leader" });
+    return false;
+  }
+};
+
 /** Records a finished game without ever failing the request that ended it. */
 export const tryRecordDailyScore = async (args: { credentials: Credentials; game: WordHuntGame }) => {
   try {

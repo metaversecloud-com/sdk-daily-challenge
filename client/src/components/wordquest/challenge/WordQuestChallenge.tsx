@@ -4,8 +4,6 @@ import type { ChallengeGameState, ChallengeMode, WordQuestGameState } from "@sha
 import { WordQuestBoard } from "../WordQuestBoard";
 import { WordQuestChallengeLeaderboardModal } from "./WordQuestChallengeLeaderboardModal";
 import { WordQuestBackButton } from "../WordQuestBackButton";
-
-const TITLES: Record<ChallengeMode, string> = { timed: "Timed", suddenDeath: "Sudden death" };
 const WARNING_SECONDS = [60, 30, 10];
 
 const formatTime = (ms: number) => {
@@ -142,7 +140,6 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
 
   if (isLoading) return <p className="p3">Loading...</p>;
 
-  const title = TITLES[mode];
   const isOver = !!state && state.status !== "playing" && state.status !== "notStarted";
 
   const resultHeading = () => {
@@ -162,11 +159,6 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
 
   return (
     <div className="flex flex-col items-center gap-4 w-full">
-      <div className="wordquest-challenge-header">
-        <WordQuestBackButton onClick={onBack} />
-        <h2 className="h4">{title}</h2>
-      </div>
-
       {error && (
         <p className="p3 wordquest-error" role="alert">
           {error}
@@ -270,7 +262,9 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
         </svg>
         {isOver ? "Results" : "Leaderboard"}
       </button>
-
+      <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+        <WordQuestBackButton onClick={onBack} />
+      </div>
       {showLeaderboard && (
         <WordQuestChallengeLeaderboardModal
           mode={mode}

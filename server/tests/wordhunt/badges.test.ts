@@ -45,6 +45,14 @@ describe("wordhunt badges", () => {
     expect(isValidWord("Topia")).toBe(true);
   });
 
+  test("CROWN! comes from the wonCrown stat and stays earned after later games", () => {
+    const crowned = { ...recordFinishedGame(undefined, makeGame("2026-01-01", 800)), wonCrown: true };
+    expect(getNewBadgeNames(undefined, crowned)).toContain("CROWN!");
+    const later = recordFinishedGame(crowned, makeGame("2026-01-02", 200));
+    expect(later.wonCrown).toBe(true);
+    expect(getNewBadgeNames(crowned, later)).not.toContain("CROWN!");
+  });
+
   test("a badge already in the inventory shows as earned", () => {
     const badges = buildBadgeList(undefined, ["CROWN!"]);
     expect(badges.find((b) => b.slug === "crown")?.earned).toBe(true);

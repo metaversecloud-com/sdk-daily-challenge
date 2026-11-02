@@ -1,18 +1,19 @@
 import { Request, Response } from "express";
 import { errorHandler, getCredentials } from "@utils/index.js";
-import { getWordQuestPath, getWordQuestVisitorData } from "./getWordQuestVisitorData.js";
-import { evaluateGuess } from "@utils/wordquest/evaluateGuess.js";
-import { WORD_LIST, WORD_LENGTH, MAX_GUESSES } from "@utils/wordquest/words.js";
+import { getWordQuestVisitorData } from "./getWordQuestVisitorData.js";
+import { evaluateGuess } from "../utils/evaluateGuess.js";
+import { WORD_BANK_SET, WORD_LENGTH, MAX_GUESSES } from "../utils/words.js";
 import { WordQuestGameState } from "@shared/types/WordQuestTypes.js";
-import { recordGameResult } from "@utils/wordquest/stats.js";
-import { recordLeaderboardResult } from "@utils/wordquest/leaderboard.js";
+import { recordGameResult } from "../utils/stats.js";
+import { recordLeaderboardResult } from "../utils/leaderboard.js";
+import { saveWordQuestData } from "../utils/saveWordQuestData.js";
 
 export const handleSubmitGuess = async (req: Request, res: Response) => {
   try {
     const credentials = getCredentials(req.query);
     const guess: string = (req.body.guess || "").toUpperCase();
 
-    const { visitor, wordQuestData } = await getWordQuestVisitorData(credentials);
+    const { visitor, wordQuestData, isAdmin } = await getWordQuestVisitorData(credentials);
 
     if (wordQuestData.status !== "playing") {
       return res.status(400).json({ success: false, error: "Today's puzzle is already complete." });
@@ -20,28 +21,28 @@ export const handleSubmitGuess = async (req: Request, res: Response) => {
     if (guess.length !== WORD_LENGTH) {
       return res.status(400).json({ success: false, error: `Guess must be ${WORD_LENGTH} letters.` });
     }
-    if (!WORD_LIST.includes(guess)) {
+    if (!WORD_BANK_SET.has(guess)) {
       return res.status(400).json({ success: false, error: "Not a valid word." });
     }
-  
+
     const feedback = evaluateGuess(guess, wordQuestData.targetWord);
     const guesses = [...wordQuestData.guesses, { guess, feedback }];
 
-    // 1. Decide the outcome FIRST
+    // 1. Decide the outcome first
     let status: WordQuestGameState["status"] = "playing";
     if (guess === wordQuestData.targetWord) status = "won";
     else if (guesses.length >= MAX_GUESSES) status = "lost";
 
-    // 2. Then record stats, only when the game has ended
+    // 2. Record stats only when the game has ended
     const stats =
       status === "playing"
         ? wordQuestData.stats
         : recordGameResult(wordQuestData.stats, status === "won", guesses.length, wordQuestData.date);
 
-    // 3. Save (targetWord stays stored internally)
-    await visitor.updateDataObject({ [getWordQuestPath(credentials)]: { ...wordQuestData, guesses, status, stats } }, {});
+    // 3. Save under the WordQuest key (keeps targetWord and any challenge runs)
+    await saveWordQuestData(visitor, credentials, { ...wordQuestData, guesses, status, stats });
 
-        // 4. Record the leaderboard result once the game has ended
+    // 4. Record the leaderboard result once the game has ended
     if (status !== "playing") {
       try {
         await recordLeaderboardResult(credentials, status === "won", guesses.length);
@@ -51,13 +52,14 @@ export const handleSubmitGuess = async (req: Request, res: Response) => {
       }
     }
 
-    // 5. Respond (only reveal targetWord once the game is over)
+    // 5. Respond (reveal targetWord only once the game is over)
     const data: WordQuestGameState = {
       guesses,
       status,
       maxGuesses: MAX_GUESSES,
       wordLength: WORD_LENGTH,
       stats,
+      isAdmin,
       ...(status !== "playing" && { targetWord: wordQuestData.targetWord }),
     };
 

@@ -6,6 +6,7 @@ import { standardizeError } from "@utils/standardizeError.js";
 import { Credentials } from "../../types/index.js";
 import { getNewBadgeNames, recordFinishedGame } from "./badges.js";
 import { grantBadges } from "./grantBadges.js";
+import { tryIsDailyLeader, tryRecordDailyScore } from "./leaderboard.js";
 import { GAME_DURATION_MS, SUBMISSION_GRACE_MS } from "./constants.js";
 
 type WorldScopedData = { [key: string]: any; wordhunt?: WordHuntVisitorData };
@@ -81,8 +82,9 @@ export const finalizeIfExpired = (game: WordHuntGame | null, now = Date.now()) =
 };
 
 /**
- * Saves a game that has just ended along with the player's updated lifetime stats, then grants any badges
- * those stats unlocked. Returns the names of the newly earned badges. Badge problems never fail the request.
+ * Records a game that has just ended on today's leaderboard, saves it with the player's updated lifetime stats,
+ * then grants any badges those stats unlocked (including CROWN! if the score tops today's leaderboard).
+ * Returns the names of the newly earned badges. Leaderboard and badge problems never fail the request.
  */
 export const finishGame = async ({
   credentials,
@@ -96,6 +98,8 @@ export const finishGame = async ({
   stats: WordHuntStats | undefined;
 }) => {
   const nextStats = recordFinishedGame(stats, game);
+  await tryRecordDailyScore({ credentials, game });
+  if (!nextStats.wonCrown && (await tryIsDailyLeader({ credentials, game }))) nextStats.wonCrown = true;
   await saveGame({ credentials, visitor, game, stats: nextStats });
   const newBadges = getNewBadgeNames(stats, nextStats);
   await grantBadges({ credentials, visitor, names: newBadges });

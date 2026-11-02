@@ -30,7 +30,7 @@ export const recordChallengeResult = async (credentials: Credentials, run: Chall
   // Make sure it stuck. If not, rewrite the whole board under its top-level key.
   const check = (await droppedAsset.fetchDataObject()) as any;
   if (check?.[key]?.[profileId] !== value) {
-    await droppedAsset.updateDataObject({ [key]: { ...(check?.[key] ?? {}), [profileId]: value },  }, {});
+    await droppedAsset.updateDataObject({ [key]: { ...(check?.[key] ?? {}), [profileId]: value }, }, {});
   }
 };
 

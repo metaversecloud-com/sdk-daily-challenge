@@ -1,17 +1,22 @@
 import { Request, Response } from "express";
 import { errorHandler, getCredentials } from "@utils/index.js";
-import { getAnswerPool } from "@utils/wordquest/answerPool.js";
-import { pickDailyWord, getTodayDateString } from "@utils/wordquest/pickDailyWord.js";
-import { MAX_GUESSES, WORD_LENGTH } from "@utils/wordquest/words.js";
+import { getAnswerPool } from "../utils/answerPool.js";
+import { pickDailyWord, getTodayDateString } from "../utils/pickDailyWord.js";
+import { MAX_GUESSES, WORD_LENGTH } from "../utils/words.js";
 import { WordQuestVisitorData, WordQuestGameState } from "@shared/types/WordQuestTypes.js";
-import { getWordQuestPath, getWordQuestVisitorData } from "./getWordQuestVisitorData.js";
+import { saveWordQuestData } from "../utils/saveWordQuestData.js";
+import { getWordQuestVisitorData } from "./getWordQuestVisitorData.js";
+import {getChallengeKey} from "./getWordQuestVisitorData.js";
 
 // DEV/TEST ONLY: remove this route before shipping.
 export const handleResetGame = async (req: Request, res: Response) => {
   try {
     const credentials = getCredentials(req.query);
 
-    const { visitor, wordQuestData: existing } = await getWordQuestVisitorData(credentials);
+    const { visitor, wordQuestData: existing, isAdmin } = await getWordQuestVisitorData(credentials);
+    if (!isAdmin) {
+      return res.status(403).json({ success: false, error: "Admins only." });
+    }
 
     const today = getTodayDateString();
     const pool = await getAnswerPool(credentials);
@@ -23,7 +28,11 @@ export const handleResetGame = async (req: Request, res: Response) => {
       stats: existing.stats,
     };
 
-    await visitor.updateDataObject({ [getWordQuestPath(credentials)]: wordQuestData }, {});
+    await saveWordQuestData(visitor, credentials, wordQuestData);
+    await visitor.updateDataObject({
+      [getChallengeKey(credentials, "timed")]: "",
+      [getChallengeKey(credentials, "suddenDeath")]: "",
+    }, {});
 
     const data: WordQuestGameState = {
       guesses: [],

@@ -1,5 +1,5 @@
 import { getCredentials, getVisitor } from "@utils/index.js";
-import { getChallengeKey, getWordQuestVisitorData } from "../../../controllers/wordQuest/getWordQuestVisitorData.js";
+import { getChallengeKey, getWordQuestVisitorData } from "../../controllers/getWordQuestVisitorData.js";
 import type { ChallengeMode, ChallengeRun, WordQuestVisitorData } from "@shared/types/WordQuestTypes.js";
 
 type Visitor = Awaited<ReturnType<typeof getWordQuestVisitorData>>["visitor"];

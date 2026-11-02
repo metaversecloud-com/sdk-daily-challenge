@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { errorHandler, getCredentials } from "@utils/index.js";
-import { getLeaderboard } from "@utils/wordquest/leaderboard.js";
+import { getLeaderboard } from "../utils/leaderboard.js";
 
 export const handleGetLeaderboard = async (req: Request, res: Response) => {
   try {
