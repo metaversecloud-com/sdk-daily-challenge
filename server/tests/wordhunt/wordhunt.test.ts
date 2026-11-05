@@ -10,7 +10,14 @@ import { getWordOfTheDay } from "../../wordhunt/utils/wordOfTheDay.js";
 jest.mock("@utils/index.js", () => ({
   errorHandler: jest.fn(({ error, res }: any) => res?.status(500).json({ success: false, error: String(error) })),
   getCredentials: jest.fn((query: any) => ({ ...query, visitorId: Number(query.visitorId) })),
+  // Used by the shared /game-state controller
+  getDroppedAsset: jest.fn().mockResolvedValue({ position: { x: 0, y: 0 } }),
+  getVisitor: (...args: any[]) => require("@utils/getVisitor.js").getVisitor(...args),
+  World: { create: jest.fn(() => ({ triggerParticle: jest.fn().mockResolvedValue({}) })) },
 }));
+
+// Granting badges needs the Topia ecosystem inventory; which badges are earned is covered by badges.test.ts.
+jest.mock("../../wordhunt/utils/grantBadges.js", () => ({ grantBadges: jest.fn() }));
 
 jest.mock("@utils/getVisitor.js", () => ({
   getVisitor: jest.fn(),
@@ -177,6 +184,14 @@ describe("wordhunt routes", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.game).toEqual(finishedGame);
     expect(visitor.updateDataObject).not.toHaveBeenCalled();
+  });
+
+  test("GET /game-state?game=wordhunt (what the client calls) includes the word of the day once today's game ended", async () => {
+    mockVisitorWithGame(makeGame({ board: { ...testBoard, date: getBoardDate() }, endedAt: Date.now(), endReason: "quit" }));
+    const res = await request(makeApp()).get("/api/game-state").query({ ...baseCreds, game: "wordhunt" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.wordOfTheDay).toEqual(getWordOfTheDay());
   });
 
   test("POST /wordhunt/end reveals the word of the day, but game-state hides it during the game", async () => {
