@@ -5,6 +5,7 @@ import router from "../../routes.js";
 import { areAdjacent, findAllWords, getBoardDate, getDailyBoard, getWordFromPath } from "../../wordhunt/utils/board.js";
 import { getPointsForWord } from "../../wordhunt/utils/constants.js";
 import { isBlockedWord, isValidWord } from "../../wordhunt/utils/dictionary.js";
+import { getWordOfTheDay } from "../../wordhunt/utils/wordOfTheDay.js";
 
 jest.mock("@utils/index.js", () => ({
   errorHandler: jest.fn(({ error, res }: any) => res?.status(500).json({ success: false, error: String(error) })),
@@ -176,6 +177,17 @@ describe("wordhunt routes", () => {
     expect(res.status).toBe(200);
     expect(res.body.data.game).toEqual(finishedGame);
     expect(visitor.updateDataObject).not.toHaveBeenCalled();
+  });
+
+  test("POST /wordhunt/end reveals the word of the day, but game-state hides it during the game", async () => {
+    const todaysGame = makeGame({ board: { ...testBoard, date: getBoardDate() } });
+    mockVisitorWithGame(todaysGame);
+    const during = await request(makeApp()).get("/api/wordhunt/game-state").query(baseCreds);
+    expect(during.body.data).not.toHaveProperty("wordOfTheDay");
+
+    const ended = await request(makeApp()).post("/api/wordhunt/end").query(baseCreds).send({ gameId: "game-1" });
+    expect(ended.body.data.wordOfTheDay).toEqual(getWordOfTheDay());
+    expect(ended.body.data.wordOfTheDay.word.length).toBeGreaterThan(0);
   });
 
   test("POST /wordhunt/start finishes today's expired game and returns it instead of starting another", async () => {

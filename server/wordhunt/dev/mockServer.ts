@@ -19,6 +19,7 @@ import { buildBadgeList, getNewBadgeNames, recordFinishedGame } from "../utils/b
 import { getBoardDate, getDailyBoard, getWordFromPath } from "../utils/board.js";
 import { getPointsForWord, GAME_DURATION_MS, LEADERBOARD_SIZE, MIN_WORD_LENGTH, SUBMISSION_GRACE_MS } from "../utils/constants.js";
 import { isValidWord } from "../utils/dictionary.js";
+import { getRevealedWordOfTheDay } from "../utils/wordOfTheDay.js";
 
 const PORT = 3000;
 const GAME_DURATION = process.env.WORDHUNT_GAME_SECONDS ? Number(process.env.WORDHUNT_GAME_SECONDS) * 1000 : GAME_DURATION_MS;
@@ -89,7 +90,7 @@ const server = http.createServer((req, res) => {
     switch (`${req.method} ${url.pathname}`) {
       case "GET /api/wordhunt/game-state":
         finalizeIfExpired(game);
-        return ok({ board, game: game || null });
+        return ok({ board, game: game || null, wordOfTheDay: getRevealedWordOfTheDay(game || null) });
 
       case "GET /api/wordhunt/leaderboard":
         finalizeIfExpired(game);
@@ -104,7 +105,7 @@ const server = http.createServer((req, res) => {
         // One game per daily board: a finished game on today's board is returned instead of starting a new one.
         if (game && game.board.date === board.date && !isActive) {
           finalizeIfExpired(game);
-          return ok({ board, game });
+          return ok({ board, game, wordOfTheDay: getRevealedWordOfTheDay(game) });
         }
         if (!isActive) {
           const now = Date.now();
@@ -151,7 +152,7 @@ const server = http.createServer((req, res) => {
           recordScore(visitorId, displayName, game);
           newBadges = recordFinish(visitorId, game);
         }
-        return ok({ board, game, newBadges });
+        return ok({ board, game, newBadges, wordOfTheDay: getRevealedWordOfTheDay(game) });
       }
 
       default:

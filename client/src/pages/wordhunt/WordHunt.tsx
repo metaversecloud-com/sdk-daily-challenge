@@ -23,6 +23,7 @@ import {
   WordHuntGameStateResponse,
   WordHuntSubmitResult,
   WordHuntSubmitWordResponse,
+  WordHuntWordOfTheDay,
 } from "@shared/types/wordhunt/WordHuntTypes";
 
 // utils
@@ -57,6 +58,7 @@ export const WordHunt = () => {
   const [phase, setPhase] = useState<Phase>("loading");
   const [board, setBoard] = useState<WordHuntBoard | null>(null);
   const [game, setGame] = useState<WordHuntGame | null>(null);
+  const [wordOfTheDay, setWordOfTheDay] = useState<WordHuntWordOfTheDay | null>(null);
   const [currentWord, setCurrentWord] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [remainingMs, setRemainingMs] = useState(0);
@@ -79,6 +81,8 @@ export const WordHunt = () => {
     gameRef.current = data.game;
     setGame(data.game);
     if ("board" in data) setBoard(data.board);
+    // The server only includes the word of the day once the game has ended.
+    if ("wordOfTheDay" in data && data.wordOfTheDay) setWordOfTheDay(data.wordOfTheDay);
   };
 
   const showFeedback = (type: "success" | "error", text: string) => setFeedback({ type, text, id: Date.now() });
@@ -246,7 +250,7 @@ export const WordHunt = () => {
                   </button>
                 </div>
               )}
-              <WordHuntResults game={game} />
+              <WordHuntResults game={game} wordOfTheDay={wordOfTheDay} />
             </>
           ) : (
             <WordHuntBadges refreshKey={game.gameId} />

@@ -1,12 +1,14 @@
 import { useEffect, useRef } from "react";
-import { WordHuntGame } from "@shared/types/wordhunt/WordHuntTypes";
+import { WordHuntGame, WordHuntWordOfTheDay } from "@shared/types/wordhunt/WordHuntTypes";
 import { WordHuntLeaderboard } from "./WordHuntLeaderboard";
+import { WordHuntWordOfTheDayPanel } from "./WordHuntWordOfTheDayPanel";
 
 interface WordHuntResultsProps {
   game: WordHuntGame;
+  wordOfTheDay: WordHuntWordOfTheDay | null;
 }
 
-export const WordHuntResults = ({ game }: WordHuntResultsProps) => {
+export const WordHuntResults = ({ game, wordOfTheDay }: WordHuntResultsProps) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   // Move focus to the results so keyboard and screen reader users land on the summary.
@@ -24,6 +26,13 @@ export const WordHuntResults = ({ game }: WordHuntResultsProps) => {
         <p className="p2">Total Points</p>
         <p className="wh-results-score">{game.score.toLocaleString()}</p>
       </div>
+
+      {wordOfTheDay && (
+        <WordHuntWordOfTheDayPanel
+          wordOfTheDay={wordOfTheDay}
+          wasFound={game.foundWords.some(({ word }) => word === wordOfTheDay.word)}
+        />
+      )}
 
       <div className="wh-panel">
         <h2 className="h4 mb-2">

@@ -8,6 +8,7 @@
     "dev": "npx tsx watch index.ts",
     "start": "node ./dist/server/index.js",
     "build": "npx tsc && npx tsc-alias",
+    "build:definitions": "npx tsx wordhunt/scripts/buildDefinitions.ts",
     "ts-check": "tsc --noEmit",
     "test": "jest",
     "test:watch": "jest --watch"
@@ -29,6 +30,7 @@
     "ts-jest": "^29.4.1",
     "tsc-alias": "^1.8.16",
     "tsx": "^4.7.1",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "wordnet-db": "^3.1.14"
   }
 }

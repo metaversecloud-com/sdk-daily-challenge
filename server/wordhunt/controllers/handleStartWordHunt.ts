@@ -3,6 +3,8 @@ import { WordHuntGameStateResponse } from "@shared/types/wordhunt/WordHuntTypes.
 import { errorHandler, getCredentials } from "@utils/index.js";
 import { getDailyBoard } from "../utils/board.js";
 import { createGame, finalizeIfExpired, finishGame, getWordHuntVisitor, isGameActive, saveGame } from "../utils/gameState.js";
+import { tryRecordDailyScore } from "../utils/leaderboard.js";
+import { getRevealedWordOfTheDay } from "../utils/wordOfTheDay.js";
 
 export const handleStartWordHunt = async (req: Request, res: Response) => {
   try {
@@ -17,7 +19,12 @@ export const handleStartWordHunt = async (req: Request, res: Response) => {
       if (finalizeIfExpired(existingGame)) {
         await finishGame({ credentials, visitor, game: existingGame, stats });
       }
-      const data: WordHuntGameStateResponse = { board, game: existingGame, serverTime: Date.now() };
+      const data: WordHuntGameStateResponse = {
+        board,
+        game: existingGame,
+        serverTime: Date.now(),
+        wordOfTheDay: getRevealedWordOfTheDay(existingGame),
+      };
       return res.json({ success: true, data });
     }
 
