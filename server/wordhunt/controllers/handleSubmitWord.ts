@@ -1,31 +1,48 @@
 import { Request, Response } from "express";
-import { WordHuntSubmitResult, WordHuntSubmitWordResponse } from "@shared/types/wordhunt/WordHuntTypes.js";
+import { WordHuntGame, WordHuntSubmitResult, WordHuntSubmitWordResponse } from "@shared/types/wordhunt/WordHuntTypes.js";
 import { errorHandler, getCredentials } from "@utils/index.js";
 import { getWordFromPath } from "../utils/board.js";
 import { getPointsForWord, MIN_WORD_LENGTH } from "../utils/constants.js";
 import { isValidWord } from "../utils/dictionary.js";
-import { finalizeIfExpired, finishGame, getWordHuntVisitor, isGameActive, saveGame } from "../utils/gameState.js";
+import {
+  addFoundWord,
+  finalizeIfExpired,
+  finishGame,
+  getCachedGame,
+  getVisitorForSave,
+  getWordHuntVisitor,
+  isGameActive,
+} from "../utils/gameState.js";
 import { tryRecordDailyScore } from "../utils/leaderboard.js";
 
+/**
+ * Checks one word and saves it if it's new and valid. Words can be submitted in parallel: the game is usually
+ * already in this server's memory, so a valid word costs a single request to Topia (saving that one word) and
+ * an invalid word costs none.
+ */
 export const handleSubmitWord = async (req: Request, res: Response) => {
   try {
     const credentials = getCredentials(req.query);
     const { gameId, path } = req.body || {};
 
-    const { visitor, game, stats } = await getWordHuntVisitor(credentials);
+    let game: WordHuntGame | null = getCachedGame(credentials, gameId);
+    if (!game) game = (await getWordHuntVisitor(credentials)).game;
     if (!game || game.gameId !== gameId) {
       return res.status(400).json({ success: false, error: "No Word Hunt game in progress" });
     }
 
     const respond = (result: WordHuntSubmitResult, word = "", points = 0) => {
-      const data: WordHuntSubmitWordResponse = { result, word, points, game, serverTime: Date.now() };
+      const data: WordHuntSubmitWordResponse = { result, word, points, game: game!, serverTime: Date.now() };
       return res.json({ success: true, data });
     };
 
     if (!isGameActive(game)) {
-      if (finalizeIfExpired(game)) {
-        await finishGame({ credentials, visitor, game, stats });
-        await tryRecordDailyScore({ credentials, game });
+      // Rare: the timer ran out without the game being ended. Load the latest save (with stats) to finish it.
+      const { visitor, game: latestGame, stats } = await getWordHuntVisitor(credentials);
+      if (latestGame && latestGame.gameId === gameId && finalizeIfExpired(latestGame)) {
+        await finishGame({ credentials, visitor, game: latestGame, stats });
+        await tryRecordDailyScore({ credentials, game: latestGame });
+        game = latestGame;
       }
       return respond("game_over");
     }
@@ -38,9 +55,7 @@ export const handleSubmitWord = async (req: Request, res: Response) => {
     if (!isValidWord(word)) return respond("not_a_word", word);
 
     const points = getPointsForWord(word);
-    game.foundWords.push({ word, points });
-    game.score += points;
-    await saveGame({ credentials, visitor, game });
+    await addFoundWord({ credentials, visitor: getVisitorForSave(credentials), game, word, points });
 
     return respond("valid", word, points);
   } catch (error) {

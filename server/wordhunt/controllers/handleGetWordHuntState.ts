@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { WordHuntGameStateResponse } from "@shared/types/wordhunt/WordHuntTypes.js";
 import { errorHandler, getCredentials } from "@utils/index.js";
 import { getDailyBoard } from "../utils/board.js";
-import { finalizeIfExpired, finishGame, getWordHuntVisitor } from "../utils/gameState.js";
+import { finalizeIfExpired, finishGame, getValidWordsForGame, getWordHuntVisitor } from "../utils/gameState.js";
 import { tryRecordDailyScore } from "../utils/leaderboard.js";
 import { getRevealedWordOfTheDay } from "../utils/wordOfTheDay.js";
 
@@ -22,6 +22,7 @@ export const handleGetWordHuntState = async (req: Request, res: Response) => {
       game,
       serverTime: Date.now(),
       wordOfTheDay: getRevealedWordOfTheDay(game),
+      validWords: getValidWordsForGame(game, board.date),
     };
     return res.json({ success: true, data });
   } catch (error) {

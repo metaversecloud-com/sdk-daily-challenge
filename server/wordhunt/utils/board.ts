@@ -1,5 +1,12 @@
 import { WordHuntBoard } from "@shared/types/wordhunt/WordHuntTypes.js";
-import { BOARD_SIZE, BOARD_TIMEZONE, LETTER_DICE, MAX_BOARD_ATTEMPTS, MIN_WORDS_PER_BOARD } from "./constants.js";
+import {
+  BOARD_SIZE,
+  BOARD_TIMEZONE,
+  getPointsForWord,
+  LETTER_DICE,
+  MAX_BOARD_ATTEMPTS,
+  MIN_WORDS_PER_BOARD,
+} from "./constants.js";
 import { getDictionary } from "./dictionary.js";
 
 /** Today's date (YYYY-MM-DD) in the board timezone. */
@@ -93,7 +100,7 @@ export const findAllWords = (tiles: string[], size = BOARD_SIZE) => {
   return found;
 };
 
-const boardCache = new Map<string, WordHuntBoard>();
+const boardCache = new Map<string, { board: WordHuntBoard; words: Set<string> }>();
 
 /**
  * Returns the board for the given date. The board is generated deterministically from the date,
@@ -101,22 +108,32 @@ const boardCache = new Map<string, WordHuntBoard>();
  */
 export const getDailyBoard = (date = getBoardDate()): WordHuntBoard => {
   const cached = boardCache.get(date);
-  if (cached) return cached;
+  if (cached) return cached.board;
 
   let bestTiles: string[] = [];
-  let bestCount = -1;
+  let bestWords = new Set<string>();
   for (let attempt = 0; attempt < MAX_BOARD_ATTEMPTS; attempt++) {
     const tiles = rollTiles(createRandom(hashString(`wordhunt-${date}-${attempt}`)));
-    const count = findAllWords(tiles).size;
-    if (count > bestCount) {
+    const words = findAllWords(tiles);
+    if (words.size > bestWords.size || attempt === 0) {
       bestTiles = tiles;
-      bestCount = count;
+      bestWords = words;
     }
-    if (count >= MIN_WORDS_PER_BOARD) break;
+    if (words.size >= MIN_WORDS_PER_BOARD) break;
   }
 
   const board: WordHuntBoard = { date, size: BOARD_SIZE, tiles: bestTiles };
   boardCache.clear(); // only today's board is ever needed
-  boardCache.set(date, board);
+  boardCache.set(date, { board, words: bestWords });
   return board;
 };
+
+/** Every dictionary word that can be made on the given day's board (computed once along with the board). */
+export const getDailyWords = (date = getBoardDate()) => {
+  getDailyBoard(date);
+  return boardCache.get(date)!.words;
+};
+
+/** Every word on the given day's board with its points, for the client to check words instantly. */
+export const getDailyWordPoints = (date = getBoardDate()): Record<string, number> =>
+  Object.fromEntries([...getDailyWords(date)].map((word) => [word, getPointsForWord(word)]));
