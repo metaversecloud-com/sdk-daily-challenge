@@ -4,6 +4,7 @@ import { errorHandler, getCredentials } from "@utils/index.js";
 import { getDailyBoard } from "../utils/board.js";
 import { finalizeIfExpired, finishGame, getWordHuntVisitor } from "../utils/gameState.js";
 import { tryRecordDailyScore } from "../utils/leaderboard.js";
+import { getRevealedWordOfTheDay } from "../utils/wordOfTheDay.js";
 
 export const handleGetWordHuntState = async (req: Request, res: Response) => {
   try {
@@ -16,7 +17,12 @@ export const handleGetWordHuntState = async (req: Request, res: Response) => {
       await tryRecordDailyScore({ credentials, game: game! });
     }
 
-    const data: WordHuntGameStateResponse = { board, game, serverTime: Date.now() };
+    const data: WordHuntGameStateResponse = {
+      board,
+      game,
+      serverTime: Date.now(),
+      wordOfTheDay: getRevealedWordOfTheDay(game),
+    };
     return res.json({ success: true, data });
   } catch (error) {
     return errorHandler({

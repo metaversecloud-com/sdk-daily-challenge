@@ -21,6 +21,8 @@ A "Qu" tile counts as two letters.
 - **Dictionary** (`data/enable1.txt` + `data/blockedWords.ts`): the ENABLE word list, minus profanity, slurs, sexual, and drug-related words so it's appropriate for elementary school players. Add words to `blockedWords.ts` to block more.
 - **Validation is server-side**: the client sends the tile path (`[row * 5 + col, ...]`), and the server checks adjacency, builds the word from its own copy of the board, and checks the dictionary.
 - **Timer**: the server stores `endsAt` and rejects words more than 3s after it. Games abandoned mid-play are marked finished the next time the player loads the game.
+- **Word of the Day** (`utils/wordOfTheDay.ts`): the longest word that can be made on the day's board, shown with its definition on the results screen. Ties go to a word that has a definition, then the more common word, then alphabetical order. It is only sent to the client once the player's game has ended, so it can't be read from the network mid-game.
+- **Definitions** (`data/definitions.tsv`, read by `utils/definitions.ts`): generated from [WordNet 3.1](https://wordnet.princeton.edu/) for the ENABLE words it covers (about 104k of 173k), with inflected forms mapped to their base word ("rematches" → "rematch"). "Topia" has a custom definition. To regenerate after changing `enable1.txt`, run `npm run build:definitions` from `server/` (uses the `wordnet-db` dev dependency; the server itself never loads WordNet). WordNet's license is in `data/WORDNET_LICENSE.txt`.
 
 ## Data object
 

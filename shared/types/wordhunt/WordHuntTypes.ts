@@ -44,6 +44,25 @@ export interface WordHuntGameStateResponse {
   serverTime: number;
   /** Names of badges the player earned by finishing this game (only set when a game was just finished). */
   newBadges?: string[];
+  /** Today's word of the day. Only sent once the player's game on today's board has ended, so it can't be peeked at. */
+  wordOfTheDay?: WordHuntWordOfTheDay;
+}
+
+export type WordHuntPartOfSpeech = "noun" | "verb" | "adjective" | "adverb";
+
+export interface WordHuntDefinition {
+  partOfSpeech: WordHuntPartOfSpeech;
+  text: string;
+  /** The dictionary form the definition belongs to when it differs from the word, e.g. "rematch" for "rematches". */
+  baseWord: string | null;
+}
+
+/** The longest word that can be made on the day's board. */
+export interface WordHuntWordOfTheDay {
+  word: string;
+  points: number;
+  /** null when WordNet has no definition for the word. */
+  definition: WordHuntDefinition | null;
 }
 
 export interface WordHuntSubmitWordResponse {

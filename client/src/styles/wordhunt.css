@@ -282,6 +282,56 @@ body:has(.wh-app) {
   border-bottom: 0;
 }
 
+/* ---------- Word of the Day ---------- */
+
+.wh-wotd {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wh-wotd h2,
+.wh-wotd p {
+  margin: 0;
+}
+
+.wh-wotd .wh-wotd-word {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+
+.wh-wotd-points {
+  flex-shrink: 0;
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.wh-wotd-status {
+  font-weight: 700;
+}
+
+.wh-wotd .wh-wotd-status--found {
+  color: var(--wh-success);
+}
+
+.wh-wotd .wh-wotd-definition {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--wh-divider);
+}
+
+.wh-wotd-pos {
+  font-style: italic;
+  font-weight: 700;
+}
+
 /* ---------- Modal ---------- */
 
 .rtsdk .wh-modal {

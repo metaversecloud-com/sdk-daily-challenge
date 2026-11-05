@@ -5,3 +5,4 @@ export * from "./WordHuntStart.js";
 export * from "./WordHuntLeaderboard.js";
 export * from "./WordHuntBadges.js";
 export * from "./WordHuntTabs.js";
+export * from "./WordHuntWordOfTheDayPanel.js";
