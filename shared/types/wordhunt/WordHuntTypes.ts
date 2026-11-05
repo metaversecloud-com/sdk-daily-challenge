@@ -46,6 +46,12 @@ export interface WordHuntGameStateResponse {
   newBadges?: string[];
   /** Today's word of the day. Only sent once the player's game on today's board has ended, so it can't be peeked at. */
   wordOfTheDay?: WordHuntWordOfTheDay;
+  /**
+   * Every word on today's board with its points, sent while today's game is in progress so the client can show
+   * results instantly. The server still checks every word. (The board itself is public, so this reveals nothing a
+   * solver couldn't find.)
+   */
+  validWords?: Record<string, number>;
 }
 
 export type WordHuntPartOfSpeech = "noun" | "verb" | "adjective" | "adverb";
@@ -73,9 +79,20 @@ export interface WordHuntSubmitWordResponse {
   serverTime: number;
 }
 
+/**
+ * How a game is saved on the visitor data object. Found words are a map (word -> points) so each word can be
+ * saved on its own, which lets several words be submitted at once without one save overwriting another.
+ * `foundWords`/`score` are only present on games saved before this format; they're merged in when loading.
+ */
+export interface WordHuntStoredGame extends Omit<WordHuntGame, "foundWords" | "score"> {
+  found?: Record<string, number>;
+  foundWords?: WordHuntFoundWord[];
+  score?: number;
+}
+
 /** Shape of the Word Hunt data stored on the visitor data object under `${urlSlug}-${sceneDropId}`. */
 export interface WordHuntVisitorData {
-  game: WordHuntGame | null;
+  game: WordHuntStoredGame | null;
   stats?: WordHuntStats;
 }
 

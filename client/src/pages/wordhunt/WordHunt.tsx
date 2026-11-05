@@ -70,19 +70,32 @@ export const WordHunt = () => {
 
   // Difference between the server clock and this device's clock, so the timer matches the server.
   const clockOffsetRef = useRef(0);
-  // Word submissions are sent one at a time so each response reflects every earlier word.
-  const submitQueueRef = useRef<Promise<void>>(Promise.resolve());
+  // Words still being saved. Words are sent in parallel; ending the game waits for these first.
+  const pendingSubmitsRef = useRef(new Set<Promise<void>>());
+  // Today's words and points, so results can be shown before the server answers (the server still checks every word).
+  const validWordsRef = useRef<Record<string, number> | null>(null);
   const gameRef = useRef<WordHuntGame | null>(null);
   const isEndingRef = useRef(false);
   const announcedRef = useRef(new Set<number>());
 
-  const applyGameState = (data: WordHuntGameStateResponse | WordHuntSubmitWordResponse) => {
+  const applyGameState = (data: WordHuntGameStateResponse) => {
     clockOffsetRef.current = data.serverTime - Date.now();
     gameRef.current = data.game;
     setGame(data.game);
-    if ("board" in data) setBoard(data.board);
+    setBoard(data.board);
+    validWordsRef.current = data.validWords ?? null;
     // The server only includes the word of the day once the game has ended.
-    if ("wordOfTheDay" in data && data.wordOfTheDay) setWordOfTheDay(data.wordOfTheDay);
+    if (data.wordOfTheDay) setWordOfTheDay(data.wordOfTheDay);
+  };
+
+  /** Adds or removes a found word on this device's copy of the game (the score follows the found words). */
+  const updateFoundWords = (change: (foundWords: WordHuntGame["foundWords"]) => WordHuntGame["foundWords"]) => {
+    const current = gameRef.current;
+    if (!current) return;
+    const foundWords = change(current.foundWords);
+    const next = { ...current, foundWords, score: foundWords.reduce((total, { points }) => total + points, 0) };
+    gameRef.current = next;
+    setGame(next);
   };
 
   const showFeedback = (type: "success" | "error", text: string) => setFeedback({ type, text, id: Date.now() });
@@ -137,8 +150,8 @@ export const WordHunt = () => {
     setShowExitModal(false);
     setPhase("ending");
 
-    // Let any words still being checked finish before the game is closed out.
-    await submitQueueRef.current;
+    // Let any words still being saved finish before the game is closed out.
+    await Promise.allSettled([...pendingSubmitsRef.current]);
     try {
       const response = await backendAPI.post("/wordhunt/end", { gameId: gameRef.current.gameId });
       applyGameState(response.data.data);
@@ -184,32 +197,63 @@ export const WordHunt = () => {
   );
 
   const handleSubmitPath = (path: number[]) => {
-    if (!board || !gameRef.current) return;
-    const word = path.map((index) => board.tiles[index]).join("");
+    if (!board || !gameRef.current || isEndingRef.current) return;
+    const word = path
+      .map((index) => board.tiles[index])
+      .join("")
+      .toLowerCase();
     if (word.length < MIN_WORD_LENGTH) {
       showFeedback("error", FEEDBACK_MESSAGES.too_short);
       return;
     }
+    if (gameRef.current.foundWords.some((found) => found.word === word)) {
+      showFeedback("error", FEEDBACK_MESSAGES.already_found);
+      return;
+    }
+
+    // With today's word list, the result is shown right away; otherwise it waits for the server.
+    const validWords = validWordsRef.current;
+    if (validWords && !(word in validWords)) {
+      showFeedback("error", FEEDBACK_MESSAGES.not_a_word);
+      return;
+    }
+    const showSuccess = (points: number) => showFeedback("success", `${word.toUpperCase()} +${points.toLocaleString()} points!`);
+    const isOptimistic = !!validWords;
+    if (isOptimistic) {
+      updateFoundWords((foundWords) => [...foundWords, { word, points: validWords[word] }]);
+      showSuccess(validWords[word]);
+    }
 
     const gameId = gameRef.current.gameId;
-    submitQueueRef.current = submitQueueRef.current.then(async () => {
-      if (isEndingRef.current && gameRef.current?.endedAt) return;
+    const undoWord = () => updateFoundWords((foundWords) => foundWords.filter((found) => found.word !== word));
+    const submit = (async () => {
       try {
         const response = await backendAPI.post("/wordhunt/submit-word", { gameId, path });
         const data = response.data.data as WordHuntSubmitWordResponse;
+        clockOffsetRef.current = data.serverTime - Date.now();
         if (gameRef.current?.gameId !== gameId) return;
 
-        applyGameState(data);
         if (data.result === "valid") {
-          showFeedback("success", `${data.word.toUpperCase()} +${data.points.toLocaleString()} points!`);
-        } else {
+          if (!isOptimistic) {
+            updateFoundWords((foundWords) => [...foundWords, { word: data.word, points: data.points }]);
+            showSuccess(data.points);
+          }
+        } else if (data.result !== "already_found" || !isOptimistic) {
+          // The server disagreed (rare): take the word back and say why.
+          if (isOptimistic) undoWord();
           showFeedback("error", FEEDBACK_MESSAGES[data.result]);
           if (data.result === "game_over") endGame();
         }
       } catch (error) {
+        if (isOptimistic) {
+          undoWord();
+          showFeedback("error", `Couldn't save ${word.toUpperCase()}. Try it again.`);
+        }
         setErrorMessage(dispatch, error as ErrorType);
       }
-    });
+    })();
+    pendingSubmitsRef.current.add(submit);
+    submit.finally(() => pendingSubmitsRef.current.delete(submit));
   };
 
   if (phase === "loading") return <Loading />;

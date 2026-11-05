@@ -8,6 +8,7 @@
  * Usage (from server/):
  *   npx tsx wordhunt/dev/mockServer.ts
  *   WORDHUNT_GAME_SECONDS=15 npx tsx wordhunt/dev/mockServer.ts   # shorter games for testing
+ *   WORDHUNT_MOCK_LATENCY_MS=400 npx tsx wordhunt/dev/mockServer.ts   # delay every response, like a slow Topia API
  *
  * Then run the client (`npm run dev` in client/) and open:
  *   http://localhost:3001/?assetId=local&interactiveNonce=local&interactivePublicKey=local&urlSlug=local&visitorId=1&sceneDropId=local&profileId=local
@@ -16,7 +17,7 @@ import http from "http";
 import { randomUUID } from "crypto";
 import { WordHuntGame, WordHuntStats, WordHuntSubmitResult } from "@shared/types/wordhunt/WordHuntTypes.js";
 import { buildBadgeList, getNewBadgeNames, recordFinishedGame } from "../utils/badges.js";
-import { getBoardDate, getDailyBoard, getWordFromPath } from "../utils/board.js";
+import { getBoardDate, getDailyBoard, getDailyWordPoints, getWordFromPath } from "../utils/board.js";
 import { getPointsForWord, GAME_DURATION_MS, LEADERBOARD_SIZE, MIN_WORD_LENGTH, SUBMISSION_GRACE_MS } from "../utils/constants.js";
 import { isValidWord } from "../utils/dictionary.js";
 import { getRevealedWordOfTheDay } from "../utils/wordOfTheDay.js";
@@ -63,10 +64,20 @@ const getLeaderboard = (visitorId: string) => {
   return { date, entries: ranked.slice(0, LEADERBOARD_SIZE), me: ranked.find((e) => e.profileId === visitorId) || null };
 };
 
+const LATENCY_MS = Number(process.env.WORDHUNT_MOCK_LATENCY_MS) || 0;
+
 const sendJson = (res: http.ServerResponse, status: number, body: object) => {
-  res.writeHead(status, { "Content-Type": "application/json" });
-  res.end(JSON.stringify(body));
+  setTimeout(() => {
+    res.writeHead(status, { "Content-Type": "application/json" });
+    res.end(JSON.stringify(body));
+  }, LATENCY_MS);
 };
+
+// Same rule as getValidWordsForGame in gameState.ts (which the mock can't import, since it loads the Topia SDK).
+const getValidWords = (game: WordHuntGame | undefined) =>
+  game && !game.endedAt && Date.now() <= game.endsAt + SUBMISSION_GRACE_MS && game.board.date === getBoardDate()
+    ? getDailyWordPoints()
+    : undefined;
 
 const finalizeIfExpired = (game: WordHuntGame | undefined) => {
   if (game && !game.endedAt && Date.now() > game.endsAt + SUBMISSION_GRACE_MS) {
@@ -90,7 +101,12 @@ const server = http.createServer((req, res) => {
     switch (`${req.method} ${url.pathname}`) {
       case "GET /api/wordhunt/game-state":
         finalizeIfExpired(game);
-        return ok({ board, game: game || null, wordOfTheDay: getRevealedWordOfTheDay(game || null) });
+        return ok({
+          board,
+          game: game || null,
+          wordOfTheDay: getRevealedWordOfTheDay(game || null),
+          validWords: getValidWords(game),
+        });
 
       case "GET /api/wordhunt/leaderboard":
         finalizeIfExpired(game);
@@ -121,7 +137,7 @@ const server = http.createServer((req, res) => {
           };
           games.set(visitorId, game);
         }
-        return ok({ board, game });
+        return ok({ board, game, validWords: getValidWords(game) });
       }
 
       case "POST /api/wordhunt/submit-word": {

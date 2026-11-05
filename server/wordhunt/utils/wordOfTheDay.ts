@@ -1,5 +1,5 @@
 import { WordHuntGame, WordHuntWordOfTheDay } from "@shared/types/wordhunt/WordHuntTypes.js";
-import { findAllWords, getBoardDate, getDailyBoard } from "./board.js";
+import { getBoardDate, getDailyWords } from "./board.js";
 import { getPointsForWord } from "./constants.js";
 import { getDefinition, getWordFrequency } from "./definitions.js";
 
@@ -30,7 +30,7 @@ const cache = new Map<string, WordHuntWordOfTheDay | null>();
 export const getWordOfTheDay = (date = getBoardDate()) => {
   if (!cache.has(date)) {
     cache.clear(); // only today's word is ever needed
-    cache.set(date, pickWordOfTheDay(findAllWords(getDailyBoard(date).tiles)));
+    cache.set(date, pickWordOfTheDay(getDailyWords(date)));
   }
   return cache.get(date) ?? null;
 };
