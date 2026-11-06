@@ -54,8 +54,14 @@ Each player keeps their best score of the day. A game is recorded when it ends (
 | POST   | `/submit-word` | `{ gameId, path }`   | `{ result, word, points, game, serverTime }`      |
 | POST   | `/end`         | `{ gameId }`         | Finished game (`endReason: "quit" \| "timeout"`)  |
 | GET    | `/leaderboard` | –                    | `{ date, entries, me }` — today's top 10 scores and the caller's own rank |
+| POST   | `/admin/clear-leaderboard` | –        | Today's (now empty) leaderboard. World admins only (403 otherwise) |
+| POST   | `/admin/reset-play` | –                | `{ board, game: null }` — deletes the admin's own game for today so they can play again. World admins only |
 
 All responses are `{ success: true, data }`.
+
+## Admin tools
+
+World admins see a gear button on the start and results screens (not during a game). It opens a popup to **clear today's leaderboard** or **reset their own play for today**, so they can test the board repeatedly. `GET /game-state` returns `isAdmin`, which only controls whether the button is shown; each admin route checks admin status with Topia (`Visitor.get`) itself. Resetting keeps the admin's lifetime stats and badges, so repeated test games still count toward them. On the dev mock server everyone is an admin unless `WORDHUNT_MOCK_ADMIN=false`.
 
 ## Not yet implemented (quality-of-life features)
 

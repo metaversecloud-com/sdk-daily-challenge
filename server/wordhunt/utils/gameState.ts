@@ -75,10 +75,14 @@ export const clearGameCache = () => gameCache.clear();
  * Loads the visitor and their Word Hunt data, which lives on the visitor data object under the
  * per-world key `${urlSlug}-${sceneDropId}` (initialized by getVisitor).
  */
-export const getWordHuntVisitor = async (credentials: Credentials, options: { includeInventory?: boolean } = {}) => {
+export const getWordHuntVisitor = async (
+  credentials: Credentials,
+  options: { includeInventory?: boolean; shouldGetVisitorDetails?: boolean } = {},
+) => {
   try {
-    const { includeInventory = false } = options;
-    const { visitor, visitorInventory } = await getVisitor(credentials, false, { includeInventory });
+    // shouldGetVisitorDetails loads the visitor's details (including isAdmin) with Visitor.get.
+    const { includeInventory = false, shouldGetVisitorDetails = false } = options;
+    const { visitor, visitorInventory } = await getVisitor(credentials, shouldGetVisitorDetails, { includeInventory });
     const key = getDataKey(credentials);
 
     let dataObject = visitor.dataObject as { [key: string]: WorldScopedData } | undefined;
@@ -152,6 +156,19 @@ export const addFoundWord = async ({
   } catch (error) {
     game.foundWords = game.foundWords.filter((found) => found.word !== word);
     game.score -= points;
+    throw standardizeError(error);
+  }
+};
+
+/**
+ * Admin tool: deletes the player's game for today so they can start a new one (for testing the board again).
+ * Lifetime stats and badges are kept.
+ */
+export const resetGame = async (credentials: Credentials) => {
+  try {
+    await getVisitorForSave(credentials).updateDataObject({ [getGamePath(credentials)]: null }, {});
+    cacheGame(credentials, null);
+  } catch (error) {
     throw standardizeError(error);
   }
 };

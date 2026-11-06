@@ -6,9 +6,11 @@ import { WordHuntWordOfTheDayPanel } from "./WordHuntWordOfTheDayPanel";
 interface WordHuntResultsProps {
   game: WordHuntGame;
   wordOfTheDay: WordHuntWordOfTheDay | null;
+  /** Changing this value reloads the leaderboard (e.g. after an admin clears it). */
+  leaderboardRefreshKey?: string;
 }
 
-export const WordHuntResults = ({ game, wordOfTheDay }: WordHuntResultsProps) => {
+export const WordHuntResults = ({ game, wordOfTheDay, leaderboardRefreshKey = "" }: WordHuntResultsProps) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
 
   // Move focus to the results so keyboard and screen reader users land on the summary.
@@ -52,7 +54,7 @@ export const WordHuntResults = ({ game, wordOfTheDay }: WordHuntResultsProps) =>
         )}
       </div>
 
-      <WordHuntLeaderboard refreshKey={game.gameId} />
+      <WordHuntLeaderboard refreshKey={`${game.gameId}-${leaderboardRefreshKey}`} />
 
       <p className="wh-panel p2 text-center">You've played today's board. Come back tomorrow for a new one!</p>
     </div>

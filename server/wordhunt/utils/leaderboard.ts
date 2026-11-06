@@ -75,6 +75,16 @@ export const recordDailyScore = async ({ credentials, game }: { credentials: Cre
   }
 };
 
+/** Admin tool: removes every score from today's leaderboard. */
+export const clearDailyLeaderboard = async (credentials: Credentials) => {
+  try {
+    const droppedAsset = await getDroppedAsset(credentials);
+    await droppedAsset.updateDataObject({ dailyLeaderboard: { date: getBoardDate(), scores: {} } }, {});
+  } catch (error) {
+    throw standardizeError(error);
+  }
+};
+
 /** Records a finished game without ever failing the request that ended it. */
 export const tryRecordDailyScore = async (args: { credentials: Credentials; game: WordHuntGame }) => {
   try {

@@ -11,7 +11,7 @@ export const handleGetWordHuntState = async (req: Request, res: Response) => {
     const credentials = getCredentials(req.query);
     const board = getDailyBoard();
 
-    const { visitor, game, stats } = await getWordHuntVisitor(credentials);
+    const { visitor, game, stats } = await getWordHuntVisitor(credentials, { shouldGetVisitorDetails: true });
     if (finalizeIfExpired(game)) {
       await finishGame({ credentials, visitor, game: game!, stats });
       await tryRecordDailyScore({ credentials, game: game! });
@@ -23,6 +23,7 @@ export const handleGetWordHuntState = async (req: Request, res: Response) => {
       serverTime: Date.now(),
       wordOfTheDay: getRevealedWordOfTheDay(game),
       validWords: getValidWordsForGame(game, board.date),
+      isAdmin: !!visitor.isAdmin,
     };
     return res.json({ success: true, data });
   } catch (error) {

@@ -52,6 +52,8 @@ export interface WordHuntGameStateResponse {
    * solver couldn't find.)
    */
   validWords?: Record<string, number>;
+  /** Whether the player is an admin of this world (shows the admin tools). Only sent by GET /game-state. */
+  isAdmin?: boolean;
 }
 
 export type WordHuntPartOfSpeech = "noun" | "verb" | "adjective" | "adverb";

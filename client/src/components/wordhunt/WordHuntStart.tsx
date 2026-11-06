@@ -3,9 +3,11 @@ import { WordHuntLeaderboard } from "./WordHuntLeaderboard";
 interface WordHuntStartProps {
   isStarting: boolean;
   onStart: () => void;
+  /** Changing this value reloads the leaderboard (e.g. after an admin clears it). */
+  leaderboardRefreshKey?: string;
 }
 
-export const WordHuntStart = ({ isStarting, onStart }: WordHuntStartProps) => {
+export const WordHuntStart = ({ isStarting, onStart, leaderboardRefreshKey }: WordHuntStartProps) => {
   return (
     <div className="flex flex-col gap-6">
       <h1 className="wh-title">Word Hunt</h1>
@@ -18,7 +20,7 @@ export const WordHuntStart = ({ isStarting, onStart }: WordHuntStartProps) => {
           <li>You have 2 minutes and one game per day. There's a new board every day!</li>
         </ul>
       </div>
-      <WordHuntLeaderboard />
+      <WordHuntLeaderboard refreshKey={leaderboardRefreshKey} />
       <button type="button" className="btn wh-btn" onClick={onStart} disabled={isStarting}>
         {isStarting ? "Starting…" : "Start Game"}
       </button>

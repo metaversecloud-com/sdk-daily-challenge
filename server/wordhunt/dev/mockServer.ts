@@ -9,6 +9,7 @@
  *   npx tsx wordhunt/dev/mockServer.ts
  *   WORDHUNT_GAME_SECONDS=15 npx tsx wordhunt/dev/mockServer.ts   # shorter games for testing
  *   WORDHUNT_MOCK_LATENCY_MS=400 npx tsx wordhunt/dev/mockServer.ts   # delay every response, like a slow Topia API
+ *   WORDHUNT_MOCK_ADMIN=false npx tsx wordhunt/dev/mockServer.ts   # play as a non-admin (everyone is an admin by default)
  *
  * Then run the client (`npm run dev` in client/) and open:
  *   http://localhost:3001/?assetId=local&interactiveNonce=local&interactivePublicKey=local&urlSlug=local&visitorId=1&sceneDropId=local&profileId=local
@@ -40,7 +41,12 @@ const recordFinish = (visitorId: string, game: WordHuntGame) => {
 // Today's best score per visitorId (leaderboard.ts needs the Topia SDK, so the mock keeps its own copy of the logic).
 const leaderboard = { date: "", scores: new Map<string, { name: string; score: number }>() };
 
+// Each finished game is recorded once, like the real server, so an admin clearing the board isn't undone by the next fetch.
+const recordedGameIds = new Set<string>();
+
 const recordScore = (visitorId: string, displayName: string, game: WordHuntGame) => {
+  if (recordedGameIds.has(game.gameId)) return;
+  recordedGameIds.add(game.gameId);
   const date = getBoardDate();
   if (game.board.date !== date || game.score <= 0) return;
   if (leaderboard.date !== date) {
@@ -62,6 +68,7 @@ const getLeaderboard = (visitorId: string) => {
 };
 
 const LATENCY_MS = Number(process.env.WORDHUNT_MOCK_LATENCY_MS) || 0;
+const IS_ADMIN = process.env.WORDHUNT_MOCK_ADMIN !== "false";
 
 const sendJson = (res: http.ServerResponse, status: number, body: object) => {
   setTimeout(() => {
@@ -103,7 +110,18 @@ const server = http.createServer((req, res) => {
           game: game || null,
           wordOfTheDay: getRevealedWordOfTheDay(game || null),
           validWords: getValidWords(game),
+          isAdmin: IS_ADMIN,
         });
+
+      case "POST /api/wordhunt/admin/clear-leaderboard":
+        if (!IS_ADMIN) return sendJson(res, 403, { success: false, error: "Only world admins can do that." });
+        leaderboard.scores.clear();
+        return ok(getLeaderboard(visitorId));
+
+      case "POST /api/wordhunt/admin/reset-play":
+        if (!IS_ADMIN) return sendJson(res, 403, { success: false, error: "Only world admins can do that." });
+        games.delete(visitorId);
+        return ok({ board, game: null, isAdmin: true });
 
       case "GET /api/wordhunt/leaderboard":
         finalizeIfExpired(game);

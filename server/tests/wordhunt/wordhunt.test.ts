@@ -21,7 +21,12 @@ jest.mock("@utils/getVisitor.js", () => ({
   getVisitor: jest.fn(),
 }));
 
+jest.mock("@utils/droppedAssets/getDroppedAsset.js", () => ({
+  getDroppedAsset: jest.fn(),
+}));
+
 const { getVisitor: mockGetVisitor } = jest.mocked(require("@utils/getVisitor.js"));
+const { getDroppedAsset: mockGetDroppedAsset } = jest.mocked(require("@utils/droppedAssets/getDroppedAsset.js"));
 
 const baseCreds = {
   assetId: "asset-123",
@@ -52,8 +57,9 @@ const makeGame = (overrides: object = {}) => ({
   ...overrides,
 });
 
-const mockVisitorWithGame = (game: object | null) => {
+const mockVisitorWithGame = (game: object | null, { isAdmin = false } = {}) => {
   const visitor = {
+    isAdmin,
     dataObject: { [DATA_KEY]: { dateStarted: 1, ...(game ? { wordhunt: { game } } : {}) } },
     fetchDataObject: jest.fn(),
     updateDataObject: jest.fn().mockResolvedValue({}),
@@ -156,9 +162,17 @@ describe("wordhunt routes", () => {
     expect(res.body.success).toBe(true);
     expect(res.body.data.board.tiles).toHaveLength(25);
     expect(res.body.data.game).toBeNull();
-    expect(mockGetVisitor).toHaveBeenCalledWith(expect.objectContaining({ urlSlug: "my-world", visitorId: 1 }), false, {
+    // Loads visitor details so the response can say whether the player is a world admin.
+    expect(mockGetVisitor).toHaveBeenCalledWith(expect.objectContaining({ urlSlug: "my-world", visitorId: 1 }), true, {
       includeInventory: false,
     });
+    expect(res.body.data.isAdmin).toBe(false);
+  });
+
+  test("GET /wordhunt/game-state tells world admins they're admins", async () => {
+    mockVisitorWithGame(null, { isAdmin: true });
+    const res = await request(makeApp()).get("/api/wordhunt/game-state").query(baseCreds);
+    expect(res.body.data.isAdmin).toBe(true);
   });
 
   test("GET /wordhunt/game-state finalizes a game whose timer ran out", async () => {
@@ -378,5 +392,76 @@ describe("wordhunt routes", () => {
     expect(res.body.data.game).toMatchObject({ endReason: "quit", score: 200, foundWords });
     expect(res.body.data.game.endedAt).not.toBeNull();
     expect(visitor.updateDataObject).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("wordhunt admin tools", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    clearGameCache();
+  });
+
+  const mockAsset = () => {
+    const asset = {
+      dataObject: { dailyLeaderboard: { date: getBoardDate(), scores: { p1: "Ann|1000", p2: "Bob|600" } } },
+      updateDataObject: jest.fn().mockResolvedValue({}),
+    };
+    mockGetDroppedAsset.mockResolvedValue(asset);
+    return asset;
+  };
+
+  test.each(["clear-leaderboard", "reset-play"])("POST /wordhunt/admin/%s is refused for non-admins", async (action) => {
+    const visitor = mockVisitorWithGame(makeGame());
+    const asset = mockAsset();
+    const res = await request(makeApp()).post(`/api/wordhunt/admin/${action}`).query(baseCreds);
+
+    expect(res.status).toBe(403);
+    expect(res.body).toEqual({ success: false, error: "Only world admins can do that." });
+    expect(visitor.updateDataObject).not.toHaveBeenCalled();
+    expect(asset.updateDataObject).not.toHaveBeenCalled();
+  });
+
+  test("POST /wordhunt/admin/clear-leaderboard empties today's leaderboard", async () => {
+    mockVisitorWithGame(null, { isAdmin: true });
+    const asset = mockAsset();
+    const res = await request(makeApp()).post("/api/wordhunt/admin/clear-leaderboard").query(baseCreds);
+
+    expect(res.status).toBe(200);
+    expect(asset.updateDataObject).toHaveBeenCalledWith({ dailyLeaderboard: { date: getBoardDate(), scores: {} } }, {});
+    // Admin status is checked with Topia (Visitor.get), not taken from the request.
+    expect(mockGetVisitor).toHaveBeenCalledWith(expect.anything(), true, { includeInventory: false });
+  });
+
+  test("POST /wordhunt/admin/reset-play deletes only the admin's game for today", async () => {
+    const finished = makeGame({
+      board: { ...testBoard, date: getBoardDate() },
+      endedAt: Date.now(),
+      endReason: "quit",
+      foundWords: [{ word: "cat", points: 200 }],
+    });
+    const visitor = mockVisitorWithGame(finished, { isAdmin: true });
+    const res = await request(makeApp()).post("/api/wordhunt/admin/reset-play").query(baseCreds);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toMatchObject({ game: null, isAdmin: true });
+    // Only the game is cleared; lifetime stats (and badges) are left alone.
+    expect(visitor.updateDataObject).toHaveBeenCalledTimes(1);
+    expect(visitor.updateDataObject).toHaveBeenCalledWith({ [`${DATA_KEY}.wordhunt.game`]: null }, {});
+  });
+
+  test("POST /wordhunt/admin/reset-play stops the old game from accepting more words", async () => {
+    mockVisitorWithGame(makeGame(), { isAdmin: true });
+    const app = makeApp();
+    // Puts the game in the server's in-memory cache.
+    await request(app).post("/api/wordhunt/submit-word").query(baseCreds).send({ gameId: "game-1", path: [0, 1, 2] });
+
+    await request(app).post("/api/wordhunt/admin/reset-play").query(baseCreds);
+    mockVisitorWithGame(null, { isAdmin: true }); // the saved game is gone now
+    const res = await request(app)
+      .post("/api/wordhunt/submit-word")
+      .query(baseCreds)
+      .send({ gameId: "game-1", path: [0, 1, 2, 3] });
+
+    expect(res.status).toBe(400);
   });
 });

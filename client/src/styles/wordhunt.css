@@ -332,6 +332,48 @@ body:has(.wh-app) {
   font-weight: 700;
 }
 
+/* ---------- Admin tools ---------- */
+
+.wh-admin-bar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.wh-admin-bar .btn-icon {
+  margin-bottom: 8px;
+}
+
+.wh-admin {
+  text-align: left;
+}
+
+.wh-admin h2:focus {
+  outline: none;
+}
+
+.wh-admin-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--wh-divider);
+}
+
+.wh-admin-section h3,
+.wh-admin-section p,
+.wh-admin-confirm p {
+  margin: 0;
+}
+
+.wh-admin .actions {
+  margin-top: 16px;
+}
+
+.wh-admin .wh-admin-status:empty {
+  display: none;
+}
+
 /* ---------- Modal ---------- */
 
 .rtsdk .wh-modal {
