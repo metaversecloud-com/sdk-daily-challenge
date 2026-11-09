@@ -6,12 +6,14 @@ import { getTodayDateString } from "./pickDailyWord.js";
 import { finalizeIfExpired, getTodaysRun, parseChallengeMode, toChallengeView } from "./challenge/challenge.js";
 import { saveChallengeRun } from "./challenge/saveChallengeRun.js";
 import { tryRecordChallengeResult } from "./challenge/challengeLeaderboard.js";
+import { getBadgeData } from "./badges/getBadgeData.js";
 
 export const getWordQuestGameState = async (
   credentials: ReturnType<typeof getCredentials>,
   query: Request["query"] = {},
 ) => {
   const { visitor, wordQuestData, isAdmin } = await getWordQuestVisitorData(credentials);
+  const badgeData = await getBadgeData(credentials, visitor, query.forceRefreshInventory === "true");
 
   // timed or suddenDeath returns that challenge's state instead of the daily game
   const mode = parseChallengeMode(query.mode);
@@ -30,6 +32,7 @@ export const getWordQuestGameState = async (
     wordLength: WORD_LENGTH,
     stats: wordQuestData.stats,
     isAdmin,
+      ...badgeData,
     // Only reveal the answer once the game is over
     ...(wordQuestData.status !== "playing" && { targetWord: wordQuestData.targetWord }),
   };

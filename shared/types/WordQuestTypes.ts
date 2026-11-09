@@ -23,6 +23,8 @@ export interface WordQuestGameState {
   targetWord?: string; // only present once status !== "playing"
   stats: WordQuestStatsData;
   isAdmin?: boolean;
+  badges?: Record<string, BadgeType>;
+  visitorInventory?: { badges: Record<string, { id: string; name: string; icon: string }> };
 }
 
 // Server-only: what's saved on the visitor's data object
@@ -81,4 +83,11 @@ export interface ChallengeLeaderboardRow {
   totalGuesses: number;
   timeLeftMs: number | null; // timed mode only
   runs: number;
+}
+
+export interface BadgeType {
+  id: string;
+  name: string;
+  icon: string;
+  description?: string;
 }

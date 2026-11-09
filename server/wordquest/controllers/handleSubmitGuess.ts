@@ -7,7 +7,8 @@ import { WordQuestGameState } from "@shared/types/WordQuestTypes.js";
 import { recordGameResult } from "../utils/stats.js";
 import { recordLeaderboardResult } from "../utils/leaderboard.js";
 import { saveWordQuestData } from "../utils/saveWordQuestData.js";
-
+import { evaluateDailyBadges } from "../utils/badges/evaluateBadges.js";
+import { awardBadges } from "../utils/badges/awardBadges.js";
 export const handleSubmitGuess = async (req: Request, res: Response) => {
   try {
     const credentials = getCredentials(req.query);
@@ -52,7 +53,12 @@ export const handleSubmitGuess = async (req: Request, res: Response) => {
       }
     }
 
-    // 5. Respond (reveal targetWord only once the game is over)
+    // 5. Award badges once the game has ended (never throws, so it can't fail the guess)
+    if (status !== "playing") {
+      await awardBadges({ credentials, visitor, earned: evaluateDailyBadges(stats) });
+    }
+
+    // 6. Respond (reveal targetWord only once the game is over)
     const data: WordQuestGameState = {
       guesses,
       status,

@@ -10,6 +10,9 @@ import { WordQuestModes, WordQuestMode } from "@/components/wordquest/WordQuestM
 import { WordQuestChallenge } from "@/components/wordquest/challenge/WordQuestChallenge";
 import "@/styles/wordquest/wordquest.css";
 import { loadAnswerList } from "@/components/wordquest/answerListCache";
+import { WordQuestBackButton } from "@/components/wordquest/WordQuestBackButton";
+import { WordQuestModeResults } from "@/components/wordquest/challenge/WordQuestModeResults";
+
 
 export const Home = () => {
   const { hasInteractiveParams } = useContext(GlobalStateContext);
@@ -21,6 +24,7 @@ export const Home = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showStats, setShowStats] = useState(false);
   const [mode, setMode] = useState<WordQuestMode | null>(null);
+  const [resultsMode, setResultsMode] = useState<"timed" | "suddenDeath" | null>(null);
 
   useEffect(() => {
     if (hasInteractiveParams) {
@@ -63,6 +67,16 @@ export const Home = () => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [mode, gameState, currentGuess, showStats, error]);
 
+    // The server grants badges before it answers the last guess, so one refetch picks up new ones
+  const refreshBadges = async () => {
+    try {
+      const response = await backendAPI.get("/game-state", { params: { game: "wordquest" } });
+      const { badges, visitorInventory } = response.data.data;
+      setGameStateLocal((g) => (g ? { ...g, badges, visitorInventory } : g));
+    } catch {
+      /* the badges tab just keeps what it had */
+    }
+  };
   const handleSubmitGuess = async () => {
     if (!gameState) return;
     try {
@@ -72,7 +86,10 @@ export const Home = () => {
       setCurrentGuess("");
       setError(null);
       // Open stats automatically when the game just ended
-      if (next.status !== "playing") setShowStats(true);
+      if (next.status !== "playing") {
+        setShowStats(true);
+        refreshBadges();
+      }
     } catch (err: any) {
       setError(err?.response?.data?.error || "Something went wrong.");
     }
@@ -90,11 +107,17 @@ export const Home = () => {
     }
   };
 
+  const handleResults = (m: WordQuestMode) => {
+    if (m === "classic") setShowStats(true);
+    else setResultsMode(m);
+  };
+
   const backToModes = () => {
     setCurrentGuess("");
     setError(null);
     setShowStats(false);
     setMode(null);
+     refreshBadges();
   };
 
   return (
@@ -105,7 +128,12 @@ export const Home = () => {
         </p>
       )}
 
-      {gameState && mode === null && <WordQuestModes onSelect={setMode} />}
+      {gameState && mode === null && <WordQuestModes
+        onSelect={setMode}
+        onResults={handleResults}
+        badges={gameState.badges}
+        ownedBadges={gameState.visitorInventory?.badges}
+      />}
 
       {(mode === "timed" || mode === "suddenDeath") && (
         <WordQuestChallenge key={mode} mode={mode} onBack={backToModes} />
@@ -165,7 +193,7 @@ export const Home = () => {
         </div>
       )}
 
-      {showStats && gameState && mode === "classic" && (
+       {showStats && gameState && (
         <WordQuestStatsModal
           stats={gameState.stats}
           status={gameState.status}
@@ -173,6 +201,8 @@ export const Home = () => {
           onClose={() => setShowStats(false)}
         />
       )}
+
+      {resultsMode && <WordQuestModeResults mode={resultsMode} onClose={() => setResultsMode(null)} />}
     </PageContainer>
   );
 };

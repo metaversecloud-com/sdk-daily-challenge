@@ -329,3 +329,127 @@ body,
 .wh-word-list li:last-child {
   border-bottom: 0;
 }
+/* Stats popup: tabs and layout */
+.wordquest-modal .wh-tabs {
+  align-self: stretch;
+}
+.wordquest-modal .wordquest-modal-back {
+  box-sizing: border-box;
+  align-self: stretch;
+  width: 100%;
+}
+
+/* The four stat columns share the width evenly and the labels can wrap */
+.wordquest-stats-summary {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+.wordquest-stats-summary dt {
+  line-height: 1.15;
+}
+
+/* A plain "You solved it!" line instead of a boxed panel inside the popup */
+.wordquest-modal .wordquest-result {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.wordquest-badges-count {
+  text-align: center;
+  margin: 0 0 8px;
+}
+.wordquest-badge-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px 8px;
+  max-height: 340px;
+  overflow-y: auto;
+}
+.wordquest-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 2px;
+}
+.wordquest-badge img {
+  width: 100%;
+  max-width: 72px;
+  height: auto;
+  filter: grayscale(1);
+  opacity: 0.45;
+}
+.wordquest-badge.is-earned img {
+  filter: none;
+  opacity: 1;
+}
+.wordquest-badge-name {
+  font-weight: 700;
+  line-height: 1.15;
+}
+.wordquest-badge-desc {
+  font-size: 0.7rem;
+  line-height: 1.2;
+  color: var(--wh-navy, #29496f);
+  opacity: 0.8;
+}
+
+/* Landing page: mode cards with a Results button beside each */
+.wordquest-mode-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.wordquest-mode-row .wordquest-mode-card {
+  flex: 1;
+  min-width: 0;
+}
+.wordquest-results-btn {
+  flex: 0 0 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 4px;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--wh-navy, #29496f);
+  background: var(--wh-panel, #fbf5ef);
+  border: 2px solid var(--wh-navy, #29496f);
+  border-radius: var(--wh-radius-panel, 16px);
+  cursor: pointer;
+}
+.wordquest-results-btn:hover { background: var(--wh-panel-hover, #fff); }
+.wordquest-results-btn:focus-visible { outline: 3px solid var(--wh-navy, #29496f); outline-offset: 2px; }
+
+.wordquest-modes .wh-tabs { margin-bottom: 12px; }
+
+/* Badges tab, grouped by mode */
+.wordquest-badges { display: flex; flex-direction: column; gap: 12px; }
+.wordquest-badges-count { text-align: center; margin: 0; }
+.wordquest-badge-group {
+  padding: 12px;
+  background: var(--wh-panel, #fbf5ef);
+  border-radius: var(--wh-radius-panel, 16px);
+}
+.wordquest-badge-group-title { margin: 0 0 8px; font-size: 1.05rem; font-weight: 800; }
+.wordquest-badge-group-count { font-weight: 600; opacity: 0.7; font-size: 0.85rem; }
+.wordquest-badge-grid { max-height: none; overflow: visible; }
+
+/* Landing page polish */
+.wordquest-modes .wh-tabs {
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0 0 12px;
+  background: var(--wh-panel, #fbf5ef);
+}
+.wordquest-modes h2 {
+  margin: 4px 0 12px;
+}
