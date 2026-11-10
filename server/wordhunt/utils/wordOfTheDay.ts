@@ -4,23 +4,23 @@ import { getPointsForWord } from "./constants.js";
 import { getDefinition, getWordFrequency } from "./definitions.js";
 
 /**
- * Picks the word of the day: the longest word that can be made on the board. When several words share that
- * length, prefer one with a definition, then the more common word, then alphabetical order.
+ * Picks the word of the day: the longest word on the board that has a definition, so the results screen can
+ * always explain it. When several words share that length, the more common word wins, then alphabetical order.
+ * Only if no word on the board has a definition (never seen in practice) does it fall back to the longest word.
  */
 export const pickWordOfTheDay = (words: Iterable<string>): WordHuntWordOfTheDay | null => {
-  const all = [...words];
+  const all = [...words].map((word) => ({ word, definition: getDefinition(word) }));
   if (all.length === 0) return null;
 
-  const longestLength = Math.max(...all.map((word) => word.length));
-  const ranked = all
-    .filter((word) => word.length === longestLength)
-    .map((word) => ({ word, definition: getDefinition(word), frequency: getWordFrequency(word) }))
-    .sort(
-      (a, b) =>
-        Number(!!b.definition) - Number(!!a.definition) || b.frequency - a.frequency || a.word.localeCompare(b.word),
-    );
+  const defined = all.filter(({ definition }) => definition);
+  const candidates = defined.length > 0 ? defined : all;
 
-  const { word, definition } = ranked[0];
+  const longestLength = Math.max(...candidates.map(({ word }) => word.length));
+  const [{ word, definition }] = candidates
+    .filter(({ word }) => word.length === longestLength)
+    .map((candidate) => ({ ...candidate, frequency: getWordFrequency(candidate.word) }))
+    .sort((a, b) => b.frequency - a.frequency || a.word.localeCompare(b.word));
+
   return { word, points: getPointsForWord(word), definition };
 };
 
