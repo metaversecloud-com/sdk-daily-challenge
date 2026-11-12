@@ -10,6 +10,7 @@ import { getChallengeLeaderboard, tryRecordChallengeResult } from "../utils/chal
 import type { ChallengeRun } from "@shared/types/WordQuestTypes.js";
 import { evaluateChallengeBadges } from "../utils/badges/evaluateBadges.js";
 import { awardBadges } from "../utils/badges/awardBadges.js";
+import { modeEvents, trackAnalytics } from "../utils/analytics.js";
 import {
   CHALLENGE_WORD_COUNT,
   advanceChallenge,
@@ -21,8 +22,15 @@ import {
   toChallengeView,
 } from "../utils/challenge/challenge.js";
 
-const awardRunBadges = (credentials: ReturnType<typeof getCredentials>, visitor: any, run: ChallengeRun) =>
-  awardBadges({ credentials, visitor, earned: evaluateChallengeBadges(run) });
+const awardRunBadges = async (credentials: ReturnType<typeof getCredentials>, visitor: any, run: ChallengeRun) => {
+  const won = run.solved.length > 0 && run.solved.every(Boolean);
+  await trackAnalytics(
+    visitor,
+    credentials.urlSlug,
+    modeEvents(run.mode, won ? ["completions", "wins"] : ["completions", "losses"], credentials.profileId),
+  );
+  await awardBadges({ credentials, visitor, earned: evaluateChallengeBadges(run) });
+};
 
 export const handleStartChallenge = async (req: Request, res: Response) => {
   try {
@@ -43,7 +51,6 @@ export const handleStartChallenge = async (req: Request, res: Response) => {
       }
       return res.json({ success: true, data: { ...toChallengeView(mode, existing), isAdmin } });
     }
-
     const pool = await getAnswerPool(credentials);
     const words = pickChallengeWords(today, credentials.profileId, pool);
     if (words.length < CHALLENGE_WORD_COUNT) {
@@ -54,6 +61,7 @@ export const handleStartChallenge = async (req: Request, res: Response) => {
 
     const run = createChallengeRun(mode, today, words);
     await saveChallengeRun(visitor, credentials, wordQuestData, mode, run);
+    await trackAnalytics(visitor, credentials.urlSlug, modeEvents(mode, ["starts"], credentials.profileId));
 
     return res.json({ success: true, data: { ...toChallengeView(mode, run), isAdmin } });
   } catch (error) {

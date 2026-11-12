@@ -1,5 +1,4 @@
-import { useContext, useEffect, useState } from "react";
-
+import { useContext, useEffect, useState, useRef} from "react";
 import { PageContainer } from "@/components";
 import { GlobalStateContext, GlobalDispatchContext } from "@/context/GlobalContext";
 import { backendAPI, setGameState } from "@/utils";
@@ -24,7 +23,9 @@ export const Home = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [showStats, setShowStats] = useState(false);
   const [mode, setMode] = useState<WordQuestMode | null>(null);
-  const [resultsMode, setResultsMode] = useState<"timed" | "suddenDeath" | null>(null);
+  const [resultsMode, setResultsMode] = useState<"timed" | "oneshot" | null>(null);
+  const submitting = useRef(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (hasInteractiveParams) {
@@ -67,6 +68,13 @@ export const Home = () => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [mode, gameState, currentGuess, showStats, error]);
 
+  // Errors fade out on their own after a moment
+  useEffect(() => {
+    if (!error || !gameState) return;
+    const timer = setTimeout(() => setError(null), 2500);
+    return () => clearTimeout(timer);
+  }, [error, gameState]);
+  
     // The server grants badges before it answers the last guess, so one refetch picks up new ones
   const refreshBadges = async () => {
     try {
@@ -78,7 +86,9 @@ export const Home = () => {
     }
   };
   const handleSubmitGuess = async () => {
-    if (!gameState) return;
+    if (!gameState || submitting.current) return;
+    submitting.current = true;
+    setIsSubmitting(true);
     try {
       const response = await backendAPI.post("/wordquest/guess", { guess: currentGuess });
       const next: WordQuestGameState = response.data.data;
@@ -92,6 +102,9 @@ export const Home = () => {
       }
     } catch (err: any) {
       setError(err?.response?.data?.error || "Something went wrong.");
+    } finally {
+      submitting.current = false;
+      setIsSubmitting(false);
     }
   };
 
@@ -135,15 +148,20 @@ export const Home = () => {
         ownedBadges={gameState.visitorInventory?.badges}
       />}
 
-      {(mode === "timed" || mode === "suddenDeath") && (
+      {(mode === "timed" || mode === "oneshot") && (
         <WordQuestChallenge key={mode} mode={mode} onBack={backToModes} />
       )}
 
       {gameState && mode === "classic" && (
         <div className="flex flex-col items-center gap-4 w-full">
           <WordQuestBackButton onClick={backToModes} />
-
-          <WordQuestBoard gameState={gameState} currentGuess={currentGuess} />
+  
+          <div className="wordquest-board-wrap">
+            <WordQuestBoard gameState={gameState} currentGuess={currentGuess} />
+            <div className="wordquest-message" role="alert">
+              {error && <p className="p3 wordquest-error-chip">{error}</p>}
+            </div>
+          </div>
 
           {gameState.status === "playing" && (
             <div className="flex flex-col items-center gap-2">
@@ -154,7 +172,7 @@ export const Home = () => {
               <button
                 type="button"
                 className="btn wordquest-guess-btn"
-                disabled={currentGuess.length !== gameState.wordLength}
+                disabled={currentGuess.length !== gameState.wordLength || isSubmitting}
                 onClick={handleSubmitGuess}
               >
                 Guess
@@ -177,12 +195,6 @@ export const Home = () => {
             </svg>
             Stats
           </button>
-
-          {error && (
-            <p className="p3 wordquest-error" role="alert">
-              {error}
-            </p>
-          )}
 
           {/* DEV ONLY — remove before shipping */}
           {gameState.isAdmin && (

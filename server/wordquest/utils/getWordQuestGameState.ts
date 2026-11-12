@@ -15,7 +15,7 @@ export const getWordQuestGameState = async (
   const { visitor, wordQuestData, isAdmin } = await getWordQuestVisitorData(credentials);
   const badgeData = await getBadgeData(credentials, visitor, query.forceRefreshInventory === "true");
 
-  // timed or suddenDeath returns that challenge's state instead of the daily game
+  // timed or oneshot returns that challenge's state instead of the daily game
   const mode = parseChallengeMode(query.mode);
   if (mode) {
     const run = getTodaysRun(wordQuestData, mode, getTodayDateString());

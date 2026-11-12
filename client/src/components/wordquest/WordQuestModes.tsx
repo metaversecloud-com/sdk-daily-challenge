@@ -2,13 +2,13 @@ import { useState } from "react";
 import type { BadgeType } from "@shared/types/WordQuestTypes";
 import { WordQuestBadges } from "./WordQuestBadges";
 
-export type WordQuestMode = "classic" | "timed" | "suddenDeath";
+export type WordQuestMode = "classic" | "timed" | "oneshot";
 
 const MODES: { id: WordQuestMode; title: string; description: string }[] = [
   { id: "classic", title: "Daily word", description: "One word a day. Six guesses." },
   { id: "timed", title: "Timed", description: "Solve 3 words in 3 minutes." },
   {
-    id: "suddenDeath",
+    id: "oneshot",
     title: "One Shot",
     description: "Solve 3 words in a row. One miss ends the run",
   },

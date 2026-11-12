@@ -9,10 +9,12 @@ import { recordLeaderboardResult } from "../utils/leaderboard.js";
 import { saveWordQuestData } from "../utils/saveWordQuestData.js";
 import { evaluateDailyBadges } from "../utils/badges/evaluateBadges.js";
 import { awardBadges } from "../utils/badges/awardBadges.js";
+import { modeEvents, trackAnalytics } from "../utils/analytics.js";
 export const handleSubmitGuess = async (req: Request, res: Response) => {
   try {
-    const credentials = getCredentials(req.query);
-    const guess: string = (req.body.guess || "").toUpperCase();
+  const credentials = getCredentials(req.query);
+  const { urlSlug, profileId } = credentials;
+  const guess: string = (req.body.guess || "").toUpperCase();
 
     const { visitor, wordQuestData, isAdmin } = await getWordQuestVisitorData(credentials);
 
@@ -53,8 +55,17 @@ export const handleSubmitGuess = async (req: Request, res: Response) => {
       }
     }
 
-    // 5. Award badges once the game has ended (never throws, so it can't fail the guess)
+    // 5. Analytics + badges (neither can fail the guess)
+    if (guesses.length === 1) {
+      await trackAnalytics(visitor, urlSlug, modeEvents("daily", ["starts"], profileId));
+    }
+
     if (status !== "playing") {
+      await trackAnalytics(
+        visitor,
+        urlSlug,
+        modeEvents("daily", status === "won" ? ["completions", "wins"] : ["completions", "losses"], profileId),
+      );
       await awardBadges({ credentials, visitor, earned: evaluateDailyBadges(stats) });
     }
 

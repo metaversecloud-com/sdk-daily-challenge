@@ -34,7 +34,7 @@ export interface WordQuestVisitorData {
   guesses: GuessResult[];
   status: "playing" | "won" | "lost";
   stats: WordQuestStatsData;
-  challenge?: Partial<Record<ChallengeMode, ChallengeRun>>; // today's timed / sudden death runs
+  challenge?: Partial<Record<ChallengeMode, ChallengeRun>>; // today's timed / one shot runs
 }
 
 export interface LeaderboardRow {
@@ -45,7 +45,7 @@ export interface LeaderboardRow {
 }
 
 // challenge
-export type ChallengeMode = "timed" | "suddenDeath";
+export type ChallengeMode = "timed" | "oneshot";
 export type ChallengeStatus = "playing" | "complete" | "failed" | "timeout";
 
 export interface ChallengeRun {

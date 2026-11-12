@@ -38,10 +38,22 @@ export const WordQuestBadges = ({ badges, owned }: Props) => {
 
   return (
     <div className="wordquest-badges">
-      <h2 className="h4">Badges</h2>
-      <p className="p3 wordquest-badges-count">
-        {earnedTotal} of {total} earned
-      </p>
+          <div className="wordquest-badges-summary">
+      <div className="wordquest-badges-summary-text">
+        <span className="wordquest-badges-summary-count">{earnedTotal}</span>
+        <span className="wordquest-badges-summary-of"> of {total} badges earned</span>
+      </div>
+      <div
+        className="wordquest-badges-bar"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuenow={earnedTotal}
+        aria-label="Badges earned"
+      >
+        <div className="wordquest-badges-bar-fill" style={{ width: `${total ? (earnedTotal / total) * 100 : 0}%` }} />
+      </div>
+    </div>
 
       {groups.map((group) => (
         <section key={group.title} className="wordquest-badge-group" aria-label={group.title}>
@@ -55,11 +67,21 @@ export const WordQuestBadges = ({ badges, owned }: Props) => {
             {group.items.map((badge) => {
               const earned = !!owned?.[badge.name];
               return (
-                <li key={badge.name} className={earned ? "wordquest-badge is-earned" : "wordquest-badge"}>
+                                <li
+                  key={badge.name}
+                  className={earned ? "wordquest-badge tooltip is-earned" : "wordquest-badge tooltip"}
+                  tabIndex={0}
+                >
+                  {badge.description && (
+                    <span className="tooltip-content p3" style={{ width: "115px" }}>
+                      {badge.description}
+                    </span>
+                  )}
                   <img src={badge.icon} alt="" width={72} height={72} loading="lazy" />
                   <span className="p3 wordquest-badge-name">{badge.name}</span>
-                  {badge.description && <span className="wordquest-badge-desc">{badge.description}</span>}
-                  <span className="sr-only">{earned ? "Earned" : "Not earned yet"}</span>
+                  <span className="sr-only">
+                    {earned ? "Earned." : "Not earned yet."} {badge.description}
+                  </span>
                 </li>
               );
             })}

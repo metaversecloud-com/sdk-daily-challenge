@@ -11,7 +11,7 @@ export const CHALLENGE_WORD_COUNT = 3; // change to 5 if you want
 export const TIMED_LIMIT_MS = 3 * 60 * 1000;
 
 export const parseChallengeMode = (value: unknown): ChallengeMode | null =>
-  value === "timed" || value === "suddenDeath" ? value : null;
+  value === "timed" || value === "oneshot" ? value : null;
 
 // Distinct words, deterministic per visitor and day
 export const pickChallengeWords = (date: string, profileId: string, pool: string[]): string[] => {
@@ -65,8 +65,8 @@ export const advanceChallenge = (run: ChallengeRun, solved: boolean, now = Date.
 
   run.solved[run.wordIndex] = solved;
 
-  // Sudden death: one failed word ends the run
-  if (outOfGuesses && run.mode === "suddenDeath") {
+  // One shot: one failed word ends the run
+  if (outOfGuesses && run.mode === "oneshot") {
     run.status = "failed";
     run.finishedAt = now;
     return;

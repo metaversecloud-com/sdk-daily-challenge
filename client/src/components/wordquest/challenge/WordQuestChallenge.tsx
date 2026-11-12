@@ -5,7 +5,7 @@ import { WordQuestBoard } from "../WordQuestBoard";
 import { WordQuestChallengeLeaderboardModal } from "./WordQuestChallengeLeaderboardModal";
 import { WordQuestBackButton } from "../WordQuestBackButton";
 
-const TITLES: Record<ChallengeMode, string> = { timed: "Timed", suddenDeath: "Sudden death" };
+const TITLES: Record<ChallengeMode, string> = { timed: "Timed", oneshot: "One Shot" };
 const WARNING_SECONDS = [60, 30, 10];
 
 const formatTime = (ms: number) => {
@@ -30,6 +30,7 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const announced = useRef<Set<number>>(new Set());
   const prevStatus = useRef<string | null>(null);
+  const busy = useRef(false);
 
   const applyState = useCallback((next: ChallengeGameState) => {
     setState(next);
@@ -60,7 +61,9 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
     prevStatus.current = status;
   }, [state?.status]);
 
-  const handleStart = async () => {
+    const handleStart = async () => {
+    if (busy.current) return;
+    busy.current = true;
     setIsBusy(true);
     try {
       const response = await backendAPI.post("/wordquest/challenge/start", { mode });
@@ -69,12 +72,14 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
     } catch (err) {
       setError((err as any)?.response?.data?.error || "Could not start.");
     } finally {
+      busy.current = false;
       setIsBusy(false);
     }
   };
 
   const handleSubmitGuess = async () => {
-    if (!state || isBusy) return;
+    if (!state || busy.current) return;
+    busy.current = true;
     setIsBusy(true);
     try {
       const response = await backendAPI.post("/wordquest/challenge/guess", { mode, guess: currentGuess });
@@ -84,9 +89,16 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
     } catch (err) {
       setError((err as any)?.response?.data?.error || "Something went wrong.");
     } finally {
+      busy.current = false;
       setIsBusy(false);
     }
   };
+
+  useEffect(() => {
+    if (!error || !state) return;
+    const timer = setTimeout(() => setError(null), 2500);
+    return () => clearTimeout(timer);
+  }, [error, state]);
 
   // Countdown for timed mode. When it reaches zero, ask the server, which decides.
   useEffect(() => {
@@ -167,20 +179,15 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
         <h2 className="h4">{title}</h2>
       </div>
 
-      {error && (
-        <p className="p3 wordquest-error" role="alert">
-          {error}
-        </p>
-      )}
-
-      {state?.status === "notStarted" && (
-        <div className="wordquest-challenge-intro">
-          <p className="p3">
+        {state?.status === "notStarted" && (
+        <div className="wordquest-intro-card">
+          <p className="p2 wordquest-intro-lead">
             {mode === "timed"
               ? `Solve ${state.wordCount} words in 3 minutes. The clock starts when you press Start.`
               : `Solve ${state.wordCount} words in a row. Miss one and the run is over. Fewer guesses is a better score.`}
           </p>
-          <p className="p3">You get one attempt per day.</p>
+          <p className="p3 wordquest-intro-note">You get one attempt per day.</p>
+           {error && <p className="p3 wordquest-error-chip">{error}</p>}
           <button type="button" className="btn wordquest-guess-btn" onClick={handleStart} disabled={isBusy}>
             Start
           </button>
@@ -224,17 +231,22 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
             )}
           </div>
 
-          <WordQuestBoard
-            gameState={
-              {
-                guesses: state.guesses,
-                status: "playing",
-                maxGuesses: state.maxGuesses,
-                wordLength: state.wordLength,
-              } as WordQuestGameState
-            }
-            currentGuess={state.status === "playing" ? currentGuess : ""}
-          />
+          <div className="wordquest-board-wrap">
+            <WordQuestBoard
+              gameState={
+                {
+                  guesses: state.guesses,
+                  status: "playing",
+                  maxGuesses: state.maxGuesses,
+                  wordLength: state.wordLength,
+                } as WordQuestGameState
+              }
+              currentGuess={state.status === "playing" ? currentGuess : ""}
+            />
+            <div className="wordquest-message" role="alert">
+              {error && <p className="p3 wordquest-error-chip">{error}</p>}
+            </div>
+          </div>
 
           {state.status === "playing" && (
             <div className="flex flex-col items-center gap-2">

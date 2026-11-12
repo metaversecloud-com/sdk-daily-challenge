@@ -1,6 +1,7 @@
 import { Credentials } from "../../../types/index.js";
 import { getCachedInventoryItems, getVisitorBadges } from "../../../utils/index.js";
 import type { BadgeName } from "./badgeCatalog.js";
+import { badgeEvents, trackAnalytics } from "../analytics.js";
 
 /**
  * Grants every badge in `earned` that the visitor doesn't own yet.

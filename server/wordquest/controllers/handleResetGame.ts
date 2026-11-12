@@ -31,7 +31,7 @@ export const handleResetGame = async (req: Request, res: Response) => {
     await saveWordQuestData(visitor, credentials, wordQuestData);
     await visitor.updateDataObject({
       [getChallengeKey(credentials, "timed")]: "",
-      [getChallengeKey(credentials, "suddenDeath")]: "",
+      [getChallengeKey(credentials, "oneshot")]: "",
     }, {});
 
     const data: WordQuestGameState = {

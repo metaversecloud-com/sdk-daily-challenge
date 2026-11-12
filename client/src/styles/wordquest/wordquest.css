@@ -102,11 +102,6 @@ body,
   outline-offset: 2px;
 }
 
-/* ---------- Messages ---------- */
-
-.wordquest-error { color: var(--wh-error, #b00020); }
-.wordquest-result { text-align: center; margin: 0; font-weight: 700; }
-
 /* ---------- Stats popup ---------- */
 
 .wordquest-modal-overlay {
@@ -188,8 +183,6 @@ body,
 .wordquest-mode-card:focus-visible { outline: 3px solid var(--wh-navy, #29496f); outline-offset: 2px; }
 .wordquest-mode-title { font-weight: 700; font-size: 1.1rem; }
 .wordquest-mode-desc { font-size: 0.9rem; }
-
-.wordquest-challenge-intro { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
 
 .wordquest-progress { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .wordquest-progress-list { list-style: none; margin: 0; padding: 0; display: flex; gap: 8px; }
@@ -392,12 +385,6 @@ body,
   font-weight: 700;
   line-height: 1.15;
 }
-.wordquest-badge-desc {
-  font-size: 0.7rem;
-  line-height: 1.2;
-  color: var(--wh-navy, #29496f);
-  opacity: 0.8;
-}
 
 /* Landing page: mode cards with a Results button beside each */
 .wordquest-mode-row {
@@ -452,4 +439,118 @@ body,
 }
 .wordquest-modes h2 {
   margin: 4px 0 12px;
+}
+
+/* Intro card for Timed and One Shot */
+.wordquest-intro-card {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 16px;
+  text-align: center;
+  background: var(--wh-panel, #fbf5ef);
+  border-radius: var(--wh-radius-panel, 28px);
+}
+.wordquest-intro-card p {
+  margin: 0;
+}
+.wordquest-intro-note {
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+.wordquest-intro-card .wordquest-guess-btn {
+  width: 100%;
+  margin-top: 4px;
+}
+
+/* Error toast: takes no space, floats over the gap above the board */
+.wordquest-message {
+  position: relative;
+  width: 100%;
+  height: 0;
+  margin: -8px 0;
+  z-index: 2;
+}
+.rtsdk .wordquest-error-chip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: max-content;
+  max-width: 100%;
+  margin: 0;
+  padding: 8px 16px;
+  text-align: center;
+  font-weight: 700;
+  color: #9b1c1c;
+  background: var(--wh-panel, #fbf5ef);
+  border: 2px solid #9b1c1c;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(41, 73, 111, 0.25);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .rtsdk .wordquest-error-chip {
+    animation: wordquest-toast 2.5s ease-in-out forwards;
+  }
+  @keyframes wordquest-toast {
+    0%   { opacity: 0; }
+    10%  { opacity: 1; }
+    80%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+}
+
+.rtsdk .wordquest-board-wrap {
+  position: relative;
+}
+.rtsdk .wordquest-board-wrap .wordquest-message {
+  position: absolute;
+  inset: 0;
+  height: auto;
+  margin: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.rtsdk .wordquest-board-wrap .wordquest-error-chip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.rtsdk .wordquest-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  margin-top: 0;
+}
+
+.rtsdk .wordquest-badges-summary {
+  background: #f9f4ef;
+  border-radius: 16px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.rtsdk .wordquest-badges-summary-text { display: flex; align-items: baseline; gap: 4px; }
+.rtsdk .wordquest-badges-summary-count { font-size: 1.6rem; font-weight: 800; color: #1d3557; line-height: 1; }
+.rtsdk .wordquest-badges-summary-of { font-size: 0.9rem; font-weight: 600; opacity: 0.75; }
+
+.rtsdk .wordquest-badges-bar {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(29, 53, 87, 0.15);
+  overflow: hidden;
+}
+.rtsdk .wordquest-badges-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #3b6fd4, #2f4a76);
+  transition: width 0.4s ease;
 }
