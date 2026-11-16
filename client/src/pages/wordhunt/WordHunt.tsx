@@ -1,8 +1,9 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 
 // components
-import { Loading } from "@/components";
+import { AdminIconButton, Confetti, Loading } from "@/components";
 import {
+  WordHuntAdminModal,
   WordHuntBadges,
   WordHuntExitModal,
   WordHuntGrid,
@@ -67,6 +68,14 @@ export const WordHunt = () => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [tab, setTab] = useState<WordHuntTab>("play");
   const [newBadges, setNewBadges] = useState<string[]>([]);
+  // Confetti plays when a game finishes on this screen, not every time a player reopens today's results.
+  const [justFinished, setJustFinished] = useState(false);
+  // World admins get testing tools (clear the leaderboard, replay today's board). The server re-checks every action.
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [leaderboardVersion, setLeaderboardVersion] = useState(0);
+  const [adminNotice, setAdminNotice] = useState("");
+  const adminBarRef = useRef<HTMLDivElement>(null);
 
   // Difference between the server clock and this device's clock, so the timer matches the server.
   const clockOffsetRef = useRef(0);
@@ -86,7 +95,28 @@ export const WordHunt = () => {
     validWordsRef.current = data.validWords ?? null;
     // The server only includes the word of the day once the game has ended.
     if (data.wordOfTheDay) setWordOfTheDay(data.wordOfTheDay);
+    if (data.isAdmin !== undefined) setIsAdmin(data.isAdmin);
   };
+
+  /** Admin reset: today's game was deleted, so go back to the start screen as if the player hadn't played. */
+  const handlePlayReset = (data: WordHuntGameStateResponse) => {
+    applyGameState(data);
+    setWordOfTheDay(null);
+    setNewBadges([]);
+    setJustFinished(false);
+    setFeedback(null);
+    setTab("play");
+    setPhase("start");
+    setLeaderboardVersion((version) => version + 1);
+    // The popup belongs to the results screen, so close it and confirm on the start screen instead.
+    setShowAdminModal(false);
+    setAdminNotice("Your game for today was reset. Start a new one whenever you're ready.");
+  };
+
+  // After a reset the old gear button is gone, so put focus on the start screen's gear.
+  useEffect(() => {
+    if (adminNotice) adminBarRef.current?.querySelector("button")?.focus();
+  }, [adminNotice]);
 
   /** Adds or removes a found word on this device's copy of the game (the score follows the found words). */
   const updateFoundWords = (change: (foundWords: WordHuntGame["foundWords"]) => WordHuntGame["foundWords"]) => {
@@ -132,6 +162,7 @@ export const WordHunt = () => {
       }
       isEndingRef.current = false;
       announcedRef.current = new Set();
+      setAdminNotice("");
       setNewBadges([]);
       setFeedback(null);
       setCurrentWord("");
@@ -160,6 +191,7 @@ export const WordHunt = () => {
       setErrorMessage(dispatch, error as ErrorType);
     }
     setTab("play");
+    setJustFinished(true);
     setPhase("results");
   }, [dispatch]);
 
@@ -260,12 +292,42 @@ export const WordHunt = () => {
 
   const errorMessage = error && <p className="p3 mt-4 text-center wh-feedback--error">{error}</p>;
 
+  // Only shown between games, so an admin can't reset a game they're in the middle of.
+  const adminTools = isAdmin && (
+    <>
+      <div className="wh-admin-bar" ref={adminBarRef}>
+        <AdminIconButton setShowSettings={() => setShowAdminModal(true)} showSettings={false} />
+      </div>
+      {adminNotice && (
+        <p className="wh-panel p3 mb-4" role="status">
+          {adminNotice}
+        </p>
+      )}
+      {showAdminModal && (
+        <WordHuntAdminModal
+          onClose={() => setShowAdminModal(false)}
+          onLeaderboardCleared={() => setLeaderboardVersion((version) => version + 1)}
+          onPlayReset={handlePlayReset}
+        />
+      )}
+    </>
+  );
+
   if (phase === "start" || !board) {
     return (
       <main className="wh-app">
+        {adminTools}
         <WordHuntTabs active={tab} onChange={setTab} />
         <div id="wh-tabpanel" role="tabpanel" aria-labelledby={`wh-tab-${tab}`}>
-          {tab === "play" ? <WordHuntStart isStarting={isStarting} onStart={startGame} /> : <WordHuntBadges />}
+          {tab === "play" ? (
+            <WordHuntStart
+              isStarting={isStarting}
+              onStart={startGame}
+              leaderboardRefreshKey={String(leaderboardVersion)}
+            />
+          ) : (
+            <WordHuntBadges />
+          )}
         </div>
         {errorMessage}
       </main>
@@ -274,7 +336,9 @@ export const WordHunt = () => {
 
   if (phase === "results" && game) {
     return (
-      <main className="wh-app">
+      <main className="wh-app relative">
+        {justFinished && <Confetti />}
+        {adminTools}
         <WordHuntTabs active={tab} onChange={setTab} playLabel="Results" />
         <div id="wh-tabpanel" role="tabpanel" aria-labelledby={`wh-tab-${tab}`}>
           {tab === "play" ? (
@@ -294,7 +358,11 @@ export const WordHunt = () => {
                   </button>
                 </div>
               )}
-              <WordHuntResults game={game} wordOfTheDay={wordOfTheDay} />
+              <WordHuntResults
+                game={game}
+                wordOfTheDay={wordOfTheDay}
+                leaderboardRefreshKey={String(leaderboardVersion)}
+              />
             </>
           ) : (
             <WordHuntBadges refreshKey={game.gameId} />

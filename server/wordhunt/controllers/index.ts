@@ -4,3 +4,5 @@ export * from "./handleGetWordHuntLeaderboard.js";
 export * from "./handleGetWordHuntState.js";
 export * from "./handleStartWordHunt.js";
 export * from "./handleSubmitWord.js";
+export * from "./handleWordHuntAdmin.js";
+export * from "./handleGetWordHuntAnalytics.js";

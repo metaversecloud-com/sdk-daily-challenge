@@ -39,7 +39,12 @@ describe("pickWordOfTheDay", () => {
     expect(pickWordOfTheDay(["cat", "dog", "macadam"])).toMatchObject({ word: "macadam", points: 1200 });
   });
 
-  test("breaks ties by preferring a word with a definition", () => {
+  test("skips longer words that have no definition", () => {
+    // "antiweed" and "retinula" (8 letters) aren't in WordNet, so the 7-letter "macadam" is picked.
+    expect(pickWordOfTheDay(["antiweed", "retinula", "macadam", "cat"])).toMatchObject({
+      word: "macadam",
+      definition: expect.objectContaining({ partOfSpeech: "noun" }),
+    });
     expect(pickWordOfTheDay(["schriks", "camisas", "macadam"])?.word).toBe("macadam");
   });
 
@@ -48,16 +53,25 @@ describe("pickWordOfTheDay", () => {
     expect(pickWordOfTheDay(["rondelles", "grandness", "greatness", "eagerness"])?.word).toBe("eagerness");
   });
 
-  test("falls back to alphabetical order, and still picks a word with no definition", () => {
+  test("only picks a word without a definition when no word on the board has one", () => {
     expect(pickWordOfTheDay(["retinula", "antiweed"])).toMatchObject({ word: "antiweed", definition: null });
     expect(pickWordOfTheDay([])).toBeNull();
   });
 
-  test("today's word of the day can be made on today's board", () => {
+  test("today's word of the day is the longest word on today's board that has a definition", () => {
     const wordOfTheDay = getWordOfTheDay();
     const words = findAllWords(getDailyBoard().tiles);
+    const defined = [...words].filter((word) => getDefinition(word));
     expect(words.has(wordOfTheDay!.word)).toBe(true);
-    expect(Math.max(...[...words].map((word) => word.length))).toBe(wordOfTheDay!.word.length);
+    expect(wordOfTheDay!.definition).not.toBeNull();
+    expect(Math.max(...defined.map((word) => word.length))).toBe(wordOfTheDay!.word.length);
+  });
+
+  test("every day this month gets a word of the day with a definition", () => {
+    for (let day = 1; day <= 30; day++) {
+      const date = `2026-11-${String(day).padStart(2, "0")}`;
+      expect(getWordOfTheDay(date)?.definition).not.toBeNull();
+    }
   });
 });
 

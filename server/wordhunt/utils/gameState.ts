@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { VisitorInterface } from "@rtsdk/topia";
+import { AnalyticType, VisitorInterface } from "@rtsdk/topia";
 import {
   WordHuntBoard,
   WordHuntGame,
@@ -11,6 +11,7 @@ import { getVisitor } from "@utils/getVisitor.js";
 import { standardizeError } from "@utils/standardizeError.js";
 import { Visitor } from "@utils/topiaInit.js";
 import { Credentials } from "../../types/index.js";
+import { getGameFinishedAnalytics, recordGameFinished } from "./analytics.js";
 import { getNewBadgeNames, recordFinishedGame } from "./badges.js";
 import { grantBadges } from "./grantBadges.js";
 import { getDailyWordPoints } from "./board.js";
@@ -76,10 +77,14 @@ export const clearGameCache = () => gameCache.clear();
  * Loads the visitor and their Word Hunt data, which lives on the visitor data object under the
  * per-world key `${urlSlug}-${sceneDropId}` (initialized by getVisitor).
  */
-export const getWordHuntVisitor = async (credentials: Credentials, options: { includeInventory?: boolean } = {}) => {
+export const getWordHuntVisitor = async (
+  credentials: Credentials,
+  options: { includeInventory?: boolean; shouldGetVisitorDetails?: boolean } = {},
+) => {
   try {
-    const { includeInventory = false } = options;
-    const { visitor, visitorInventory } = await getVisitor(credentials, false, { includeInventory });
+    // shouldGetVisitorDetails loads the visitor's details (including isAdmin) with Visitor.get.
+    const { includeInventory = false, shouldGetVisitorDetails = false } = options;
+    const { visitor, visitorInventory } = await getVisitor(credentials, shouldGetVisitorDetails, { includeInventory });
     const key = getDataKey(credentials);
 
     let dataObject = visitor.dataObject as { [key: string]: WorldScopedData } | undefined;
@@ -89,9 +94,10 @@ export const getWordHuntVisitor = async (credentials: Credentials, options: { in
     const stored = dataObject?.[key]?.wordhunt?.game;
     const game = stored ? fromStoredGame(stored) : null;
     const stats = dataObject?.[key]?.wordhunt?.stats as WordHuntStats | undefined;
+    const replayDate = dataObject?.[key]?.wordhunt?.replayDate as string | undefined;
     cacheGame(credentials, game);
 
-    return { visitor, game, stats, visitorInventory };
+    return { visitor, game, stats, replayDate, visitorInventory };
   } catch (error) {
     throw standardizeError(error);
   }
@@ -109,18 +115,21 @@ export const saveGame = async ({
   visitor,
   game,
   stats,
+  analytics,
 }: {
   credentials: Credentials;
   visitor: VisitorInterface;
   game: WordHuntGame;
   stats?: WordHuntStats;
+  /** Topia analytics events to record with this save (no extra request). */
+  analytics?: AnalyticType[];
 }) => {
   try {
     // Dot-path keys so only the Word Hunt game (and stats) are replaced, leaving other per-world fields untouched.
     const prefix = `${getDataKey(credentials)}.wordhunt`;
     await visitor.updateDataObject(
       { [`${prefix}.game`]: toStoredGame(game), ...(stats && { [`${prefix}.stats`]: stats }) },
-      {},
+      analytics?.length ? { analytics } : {},
     );
     cacheGame(credentials, game);
   } catch (error) {
@@ -157,7 +166,24 @@ export const addFoundWord = async ({
   }
 };
 
-export const createGame = (board: WordHuntBoard, now = Date.now()): WordHuntGame => ({
+/**
+ * Admin tool: deletes the player's game for `boardDate` so they can start a new one (for testing the board again).
+ * Lifetime stats and badges are kept. Their later games on that board are marked as replays and left out of analytics.
+ */
+export const resetGame = async (credentials: Credentials, boardDate: string) => {
+  try {
+    await getVisitorForSave(credentials).updateDataObject(
+      { [getGamePath(credentials)]: null, [`${getDataKey(credentials)}.wordhunt.replayDate`]: boardDate },
+      {},
+    );
+    cacheGame(credentials, null);
+  } catch (error) {
+    throw standardizeError(error);
+  }
+};
+
+export const createGame = (board: WordHuntBoard, now = Date.now(), isReplay = false): WordHuntGame => ({
+  ...(isReplay && { isReplay }),
   gameId: randomUUID(),
   board,
   startedAt: now,
@@ -206,10 +232,14 @@ export const finishGame = async ({
   stats: WordHuntStats | undefined;
 }) => {
   const nextStats = recordFinishedGame(stats, game);
+  // Record today's score first, so the CROWN! check sees it (and CROWN! is included in the new badges below).
   await tryRecordDailyScore({ credentials, game });
   if (!nextStats.wonCrown && (await tryIsDailyLeader({ credentials, game }))) nextStats.wonCrown = true;
-  await saveGame({ credentials, visitor, game, stats: nextStats });
   const newBadges = getNewBadgeNames(stats, nextStats);
+  const analytics = getGameFinishedAnalytics(credentials, game, newBadges);
+  await saveGame({ credentials, visitor, game, stats: nextStats, analytics });
+  // Recorded in the background; never fails or slows down the request.
+  void recordGameFinished(credentials, game);
   await grantBadges({ credentials, visitor, names: newBadges });
   return newBadges;
 };

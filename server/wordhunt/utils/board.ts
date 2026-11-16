@@ -101,6 +101,9 @@ export const findAllWords = (tiles: string[], size = BOARD_SIZE) => {
 };
 
 const boardCache = new Map<string, { board: WordHuntBoard; words: Set<string> }>();
+// Today's board plus a few earlier ones (finishing an old, abandoned game looks up that day's words), so an
+// earlier day's lookup doesn't evict today's board and force it to be rebuilt.
+export const MAX_CACHED_DATES = 3;
 
 /**
  * Returns the board for the given date. The board is generated deterministically from the date,
@@ -123,8 +126,8 @@ export const getDailyBoard = (date = getBoardDate()): WordHuntBoard => {
   }
 
   const board: WordHuntBoard = { date, size: BOARD_SIZE, tiles: bestTiles };
-  boardCache.clear(); // only today's board is ever needed
   boardCache.set(date, { board, words: bestWords });
+  if (boardCache.size > MAX_CACHED_DATES) boardCache.delete(boardCache.keys().next().value!);
   return board;
 };
 

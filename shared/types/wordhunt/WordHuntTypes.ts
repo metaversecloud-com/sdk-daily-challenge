@@ -27,6 +27,8 @@ export interface WordHuntGame {
   endReason: WordHuntEndReason | null;
   score: number;
   foundWords: WordHuntFoundWord[];
+  /** An admin's extra game after resetting their play (for testing). Left out of analytics. */
+  isReplay?: boolean;
 }
 
 export type WordHuntSubmitResult =
@@ -52,6 +54,8 @@ export interface WordHuntGameStateResponse {
    * solver couldn't find.)
    */
   validWords?: Record<string, number>;
+  /** Whether the player is an admin of this world (shows the admin tools). Only sent by GET /game-state. */
+  isAdmin?: boolean;
 }
 
 export type WordHuntPartOfSpeech = "noun" | "verb" | "adjective" | "adverb";
@@ -94,6 +98,8 @@ export interface WordHuntStoredGame extends Omit<WordHuntGame, "foundWords" | "s
 export interface WordHuntVisitorData {
   game: WordHuntStoredGame | null;
   stats?: WordHuntStats;
+  /** Board date (YYYY-MM-DD) an admin last reset their play on. Their later games that day are replays. */
+  replayDate?: string;
 }
 
 /** Lifetime Word Hunt progress, used to decide which badges a player has earned. */
@@ -143,4 +149,49 @@ export interface WordHuntLeaderboardResponse {
   entries: WordHuntLeaderboardEntry[];
   /** The requesting player's own entry, even if they are outside the top entries. */
   me: WordHuntLeaderboardEntry | null;
+}
+
+/** Raw per-day counters kept on the dropped asset under `wordHuntAnalytics.<YYYY-MM-DD>` (by board date). */
+export interface WordHuntAnalyticsCounters {
+  /** Games started (including admin replays). */
+  gamesStarted: number;
+  /** Games that ended, by quitting early or by the timer running out. */
+  gamesCompleted: number;
+  gamesQuit: number;
+  gamesTimedOut: number;
+  /** Finished games where the player found no words. */
+  gamesWithNoWords: number;
+  /** Totals across finished games. */
+  wordsFound: number;
+  pointsScored: number;
+  secondsPlayed: number;
+  /** Words of 7+ letters found. */
+  longWordsFound: number;
+  /** Finished games where the player found the word of the day. */
+  wordOfTheDayFound: number;
+}
+
+/** Counters plus the rates and averages worked out from them, for one day or a range of days. */
+export interface WordHuntAnalyticsSummary extends WordHuntAnalyticsCounters {
+  /** gamesCompleted / gamesStarted (0–1), or null with no games started. */
+  completionRate: number | null;
+  /** gamesQuit / gamesCompleted (0–1), or null with no finished games. Averages below are per finished game. */
+  quitRate: number | null;
+  averageWordsFound: number | null;
+  averageScore: number | null;
+  averageSecondsPlayed: number | null;
+  /** Share of finished games that found the word of the day (0–1). */
+  wordOfTheDayFindRate: number | null;
+}
+
+export interface WordHuntAnalyticsDay extends WordHuntAnalyticsSummary {
+  /** Board date (YYYY-MM-DD). */
+  date: string;
+}
+
+export interface WordHuntAnalyticsResponse {
+  /** One entry per day, newest first, including days with no games. */
+  days: WordHuntAnalyticsDay[];
+  /** All the days above combined. */
+  totals: WordHuntAnalyticsSummary;
 }

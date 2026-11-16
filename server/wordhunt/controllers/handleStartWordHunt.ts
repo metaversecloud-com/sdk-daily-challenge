@@ -11,6 +11,7 @@ import {
   isGameActive,
   saveGame,
 } from "../utils/gameState.js";
+import { getGameStartedAnalytics, recordGameStarted } from "../utils/analytics.js";
 import { getRevealedWordOfTheDay } from "../utils/wordOfTheDay.js";
 
 export const handleStartWordHunt = async (req: Request, res: Response) => {
@@ -18,7 +19,7 @@ export const handleStartWordHunt = async (req: Request, res: Response) => {
     const credentials = getCredentials(req.query);
     const board = getDailyBoard();
 
-    const { visitor, game: existingGame, stats } = await getWordHuntVisitor(credentials);
+    const { visitor, game: existingGame, stats, replayDate } = await getWordHuntVisitor(credentials);
 
     // Each player gets one game per daily board. If today's game has already finished, return it instead of
     // starting a new one so the player sees their results.
@@ -45,8 +46,11 @@ export const handleStartWordHunt = async (req: Request, res: Response) => {
         existingGame.endReason = now >= existingGame.endsAt ? "timeout" : "quit";
         await finishGame({ credentials, visitor, game: existingGame, stats });
       }
-      game = createGame(board);
-      await saveGame({ credentials, visitor, game });
+      // After an admin resets their play, their later games on this board are replays (left out of analytics).
+      game = createGame(board, Date.now(), replayDate === board.date);
+      await saveGame({ credentials, visitor, game, analytics: getGameStartedAnalytics(credentials, game) });
+      // Recorded in the background; never fails or slows down the request.
+      void recordGameStarted(credentials, game);
     }
 
     const data: WordHuntGameStateResponse = {

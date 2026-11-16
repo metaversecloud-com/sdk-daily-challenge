@@ -10,7 +10,8 @@ export const getWordHuntGameState = async (
 ): Promise<WordHuntGameStateResponse> => {
   const board = getDailyBoard();
 
-  const { visitor, game, stats } = await getWordHuntVisitor(credentials);
+  // Loads visitor details so the response can say whether the player is a world admin (shows the admin tools).
+  const { visitor, game, stats } = await getWordHuntVisitor(credentials, { shouldGetVisitorDetails: true });
   // finishGame also records the score on today's leaderboard.
   if (finalizeIfExpired(game)) await finishGame({ credentials, visitor, game: game!, stats });
 
@@ -20,5 +21,6 @@ export const getWordHuntGameState = async (
     serverTime: Date.now(),
     wordOfTheDay: getRevealedWordOfTheDay(game),
     validWords: getValidWordsForGame(game, board.date),
+    isAdmin: !!visitor.isAdmin,
   };
 };
