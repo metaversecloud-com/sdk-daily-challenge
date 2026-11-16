@@ -8,6 +8,7 @@ import {
   handleSubmitWord,
   handleClearWordHuntLeaderboard,
   handleResetWordHuntPlay,
+  handleGetWordHuntAnalytics,
 } from "./controllers/index.js";
 
 const wordHuntRouter = express.Router();
@@ -22,5 +23,6 @@ wordHuntRouter.post("/end", handleEndWordHunt);
 // Admin tools (each checks that the player is a world admin)
 wordHuntRouter.post("/admin/clear-leaderboard", handleClearWordHuntLeaderboard);
 wordHuntRouter.post("/admin/reset-play", handleResetWordHuntPlay);
+wordHuntRouter.get("/admin/analytics", handleGetWordHuntAnalytics);
 
 export default wordHuntRouter;

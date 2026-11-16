@@ -6,6 +6,9 @@ import { WordHuntGameStateResponse } from "@shared/types/wordhunt/WordHuntTypes"
 // utils
 import { backendAPI } from "@/utils";
 
+// components
+import { WordHuntAdminStats } from "./WordHuntAdminStats";
+
 type AdminAction = "clear-leaderboard" | "reset-play";
 
 const ACTIONS: Record<AdminAction, { confirm: string; button: string; success: string; failure: string }> = {
@@ -34,11 +37,13 @@ export const WordHuntAdminModal = ({ onClose, onLeaderboardCleared, onPlayReset 
   const modalRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const actionButtonRefs = useRef<Partial<Record<AdminAction, HTMLButtonElement | null>>>({});
-  // Where focus goes when the confirmation step closes: the action's button if cancelled, the heading once it ran.
-  const returnFocusRef = useRef<AdminAction | "heading" | null>(null);
+  const actionButtonRefs = useRef<Partial<Record<AdminAction | "stats", HTMLButtonElement | null>>>({});
+  // Where focus goes when the confirmation step or stats view closes: the button that opened it, or the heading
+  // once an action ran.
+  const returnFocusRef = useRef<AdminAction | "stats" | "heading" | null>(null);
 
   const [pendingAction, setPendingAction] = useState<AdminAction | null>(null);
+  const [showStats, setShowStats] = useState(false);
   const [isBusy, setIsBusy] = useState(false);
   const [status, setStatus] = useState<{ text: string; isError: boolean } | null>(null);
 
@@ -49,14 +54,20 @@ export const WordHuntAdminModal = ({ onClose, onLeaderboardCleared, onPlayReset 
   }, []);
 
   // The button that had focus disappears when the view switches, so move focus to the new view.
+  // (The stats view focuses its own heading.)
   useEffect(() => {
     if (pendingAction) cancelRef.current?.focus();
-    else if (returnFocusRef.current) {
+    else if (!showStats && returnFocusRef.current) {
       const target = returnFocusRef.current;
       (target === "heading" ? headingRef.current : actionButtonRefs.current[target])?.focus();
       returnFocusRef.current = null;
     }
-  }, [pendingAction]);
+  }, [pendingAction, showStats]);
+
+  const closeStats = () => {
+    returnFocusRef.current = "stats";
+    setShowStats(false);
+  };
 
   const askToConfirm = (action: AdminAction) => setPendingAction(action);
 
@@ -69,10 +80,13 @@ export const WordHuntAdminModal = ({ onClose, onLeaderboardCleared, onPlayReset 
     if (event.key === "Escape") {
       event.stopPropagation();
       if (pendingAction) cancelConfirm();
+      else if (showStats) closeStats();
       else onClose();
     } else if (event.key === "Tab") {
       // Keep focus inside the dialog.
-      const focusable = [...(modalRef.current?.querySelectorAll<HTMLElement>("button:not(:disabled)") ?? [])];
+      const focusable = [
+        ...(modalRef.current?.querySelectorAll<HTMLElement>("button:not(:disabled), select, [tabindex='0']") ?? []),
+      ];
       if (focusable.length === 0) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
@@ -117,7 +131,9 @@ export const WordHuntAdminModal = ({ onClose, onLeaderboardCleared, onPlayReset 
         </h2>
         <p className="p3">Only world admins can see these.</p>
 
-        {pendingAction ? (
+        {showStats ? (
+          <WordHuntAdminStats onBack={closeStats} />
+        ) : pendingAction ? (
           <div className="wh-admin-confirm">
             <p className="p2" id="wh-admin-confirm-message">
               {ACTIONS[pendingAction].confirm}
@@ -145,6 +161,21 @@ export const WordHuntAdminModal = ({ onClose, onLeaderboardCleared, onPlayReset 
           </div>
         ) : (
           <>
+            <section className="wh-admin-section" aria-labelledby="wh-admin-stats">
+              <h3 className="h4" id="wh-admin-stats">
+                Stats
+              </h3>
+              <p className="p3">Games started, completion rate, and average words and score per day.</p>
+              <button
+                ref={(el) => (actionButtonRefs.current.stats = el)}
+                type="button"
+                className="btn wh-btn"
+                onClick={() => setShowStats(true)}
+              >
+                View stats
+              </button>
+            </section>
+
             <section className="wh-admin-section" aria-labelledby="wh-admin-leaderboard">
               <h3 className="h4" id="wh-admin-leaderboard">
                 Today's leaderboard

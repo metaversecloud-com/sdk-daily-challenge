@@ -13,9 +13,14 @@ jest.mock("@utils/index.js", () => ({
   getCredentials: jest.fn((query: any) => ({ ...query, visitorId: Number(query.visitorId) })),
 }));
 
-// The visitor the fast submit path saves with (Visitor.create makes no request to Topia).
+// The visitor the fast submit path saves with (Visitor.create makes no request to Topia), and the dropped asset
+// the analytics counters are added to (DroppedAsset.create also makes no request).
 let mockVisitorForSave: any;
-jest.mock("@utils/topiaInit.js", () => ({ Visitor: { create: jest.fn(() => mockVisitorForSave) } }));
+const mockAnalyticsAsset = { incrementDataObjectValue: jest.fn().mockResolvedValue({}) };
+jest.mock("@utils/topiaInit.js", () => ({
+  Visitor: { create: jest.fn(() => mockVisitorForSave) },
+  DroppedAsset: { create: jest.fn(() => mockAnalyticsAsset) },
+}));
 
 jest.mock("@utils/getVisitor.js", () => ({
   getVisitor: jest.fn(),
@@ -57,10 +62,11 @@ const makeGame = (overrides: object = {}) => ({
   ...overrides,
 });
 
-const mockVisitorWithGame = (game: object | null, { isAdmin = false } = {}) => {
+const mockVisitorWithGame = (game: object | null, { isAdmin = false, replayDate = "" } = {}) => {
+  const wordhunt = { ...(game && { game }), ...(replayDate && { replayDate }) };
   const visitor = {
     isAdmin,
-    dataObject: { [DATA_KEY]: { dateStarted: 1, ...(game ? { wordhunt: { game } } : {}) } },
+    dataObject: { [DATA_KEY]: { dateStarted: 1, ...(Object.keys(wordhunt).length ? { wordhunt } : {}) } },
     fetchDataObject: jest.fn(),
     updateDataObject: jest.fn().mockResolvedValue({}),
   };
@@ -185,7 +191,7 @@ describe("wordhunt routes", () => {
         [`${DATA_KEY}.wordhunt.game`]: expect.objectContaining({ endReason: "timeout" }),
         [`${DATA_KEY}.wordhunt.stats`]: expect.objectContaining({ gamesPlayed: 1 }),
       },
-      {},
+      { analytics: expect.arrayContaining([expect.objectContaining({ analyticName: "completions" })]) },
     );
   });
 
@@ -199,7 +205,10 @@ describe("wordhunt routes", () => {
     expect(game.foundWords).toEqual([]);
     expect(game.endsAt - game.startedAt).toBe(120_000);
     expect(game.board.tiles).toEqual(res.body.data.board.tiles);
-    expect(visitor.updateDataObject).toHaveBeenCalledWith({ [`${DATA_KEY}.wordhunt.game`]: toStoredGame(game) }, {});
+    expect(visitor.updateDataObject).toHaveBeenCalledWith(
+      { [`${DATA_KEY}.wordhunt.game`]: toStoredGame(game) },
+      { analytics: [expect.objectContaining({ analyticName: "starts", uniqueKey: expect.stringContaining(game.gameId) })] },
+    );
     // Saved with found words as a map, so each word can be saved on its own.
     expect(visitor.updateDataObject.mock.calls[0][0][`${DATA_KEY}.wordhunt.game`].found).toEqual({});
   });
@@ -269,7 +278,7 @@ describe("wordhunt routes", () => {
         [`${DATA_KEY}.wordhunt.game`]: expect.objectContaining({ gameId: "game-1", endReason: "timeout" }),
         [`${DATA_KEY}.wordhunt.stats`]: expect.objectContaining({ gamesPlayed: 1 }),
       },
-      {},
+      { analytics: expect.arrayContaining([expect.objectContaining({ analyticName: "completions" })]) },
     );
   });
 
@@ -281,7 +290,7 @@ describe("wordhunt routes", () => {
     expect(res.body.data.game.endedAt).toBeNull();
     expect(visitor.updateDataObject).toHaveBeenCalledWith(
       { [`${DATA_KEY}.wordhunt.game`]: toStoredGame(res.body.data.game) },
-      {},
+      { analytics: [expect.objectContaining({ analyticName: "starts" })] },
     );
   });
 
@@ -444,9 +453,13 @@ describe("wordhunt admin tools", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({ game: null, isAdmin: true });
-    // Only the game is cleared; lifetime stats (and badges) are left alone.
+    // Only the game is cleared (lifetime stats and badges are left alone), and today is marked so the admin's
+    // next games on this board are replays.
     expect(visitor.updateDataObject).toHaveBeenCalledTimes(1);
-    expect(visitor.updateDataObject).toHaveBeenCalledWith({ [`${DATA_KEY}.wordhunt.game`]: null }, {});
+    expect(visitor.updateDataObject).toHaveBeenCalledWith(
+      { [`${DATA_KEY}.wordhunt.game`]: null, [`${DATA_KEY}.wordhunt.replayDate`]: getBoardDate() },
+      {},
+    );
   });
 
   test("POST /wordhunt/admin/reset-play stops the old game from accepting more words", async () => {
@@ -463,5 +476,136 @@ describe("wordhunt admin tools", () => {
       .send({ gameId: "game-1", path: [0, 1, 2, 3] });
 
     expect(res.status).toBe(400);
+  });
+});
+
+describe("wordhunt analytics", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    clearGameCache();
+  });
+
+  // Recording runs in the background, so let it finish before checking.
+  const flushBackgroundWork = () => new Promise((resolve) => setImmediate(resolve));
+  const incrementedCounters = () =>
+    Object.fromEntries(mockAnalyticsAsset.incrementDataObjectValue.mock.calls.map(([path, amount]: any[]) => [path, amount]));
+
+  test("starting a game counts it for today's board", async () => {
+    mockVisitorWithGame(null);
+    await request(makeApp()).post("/api/wordhunt/start").query(baseCreds);
+    await flushBackgroundWork();
+
+    expect(incrementedCounters()).toEqual({ [`wordHuntAnalytics.${getBoardDate()}.gamesStarted`]: 1 });
+  });
+
+  test("ending a game records the Topia events with the save, and the day's counters", async () => {
+    const foundWords = [
+      { word: "planets", points: 1200 },
+      { word: "cat", points: 200 },
+    ];
+    const startedAt = Date.now() - 45_000;
+    const visitor = mockVisitorWithGame(makeGame({ board: { ...testBoard, date: "2026-01-01" }, startedAt, foundWords }));
+    await request(makeApp())
+      .post("/api/wordhunt/end")
+      .query({ ...baseCreds, profileId: "p1" })
+      .send({ gameId: "game-1" });
+    await flushBackgroundWork();
+
+    const [, options] = visitor.updateDataObject.mock.calls[0];
+    const events = Object.fromEntries(options.analytics.map((event: any) => [event.analyticName, event]));
+    expect(events.completions).toMatchObject({ profileId: "p1", urlSlug: "my-world", uniqueKey: "p1-game-1" });
+    expect(events.quits).toBeDefined();
+    expect(events.wordsFound).toMatchObject({ incrementBy: 2 });
+    expect(events.pointsScored).toMatchObject({ incrementBy: 1400 });
+    expect(events.longWordsFound).toMatchObject({ incrementBy: 1 });
+    // One "badgesAwarded" per new badge: the first game, and a 7+ letter word.
+    const badgeKeys = options.analytics.filter((event: any) => event.analyticName === "badgesAwarded").map((event: any) => event.uniqueKey);
+    expect(badgeKeys.sort()).toEqual(["p1-Amateur Hunter", "p1-Big Word Hunter"]);
+
+    const counters = incrementedCounters();
+    const day = "wordHuntAnalytics.2026-01-01";
+    expect(counters).toMatchObject({
+      [`${day}.gamesCompleted`]: 1,
+      [`${day}.gamesQuit`]: 1,
+      [`${day}.wordsFound`]: 2,
+      [`${day}.pointsScored`]: 1400,
+      [`${day}.longWordsFound`]: 1,
+    });
+    expect(counters[`${day}.secondsPlayed`]).toBeGreaterThanOrEqual(45);
+  });
+
+  test("a counter that fails to save never fails the player's request", async () => {
+    mockVisitorWithGame(null);
+    mockAnalyticsAsset.incrementDataObjectValue.mockRejectedValueOnce(new Error("Topia unavailable"));
+    const res = await request(makeApp()).post("/api/wordhunt/start").query(baseCreds);
+    await flushBackgroundWork();
+
+    expect(res.status).toBe(200);
+  });
+
+  test("GET /wordhunt/admin/analytics is refused for non-admins", async () => {
+    mockVisitorWithGame(null);
+    const res = await request(makeApp()).get("/api/wordhunt/admin/analytics").query(baseCreds);
+    expect(res.status).toBe(403);
+  });
+
+  test("GET /wordhunt/admin/analytics returns daily stats with rates and averages", async () => {
+    mockVisitorWithGame(null, { isAdmin: true });
+    const today = getBoardDate();
+    mockGetDroppedAsset.mockResolvedValue({
+      dataObject: {
+        wordHuntAnalytics: { [today]: { gamesStarted: 4, gamesCompleted: 3, gamesTimedOut: 3, wordsFound: 30, pointsScored: 9000 } },
+      },
+    });
+    const res = await request(makeApp()).get("/api/wordhunt/admin/analytics").query({ ...baseCreds, days: 3 });
+
+    expect(res.status).toBe(200);
+    expect(res.body.data.days).toHaveLength(3);
+    expect(res.body.data.days[0]).toMatchObject({
+      date: today,
+      gamesStarted: 4,
+      completionRate: 0.75,
+      averageWordsFound: 10,
+      averageScore: 3000,
+    });
+    expect(res.body.data.totals).toMatchObject({ gamesStarted: 4, gamesCompleted: 3 });
+  });
+
+  test("GET /wordhunt/admin/analytics defaults to 7 days and allows at most 90", async () => {
+    mockVisitorWithGame(null, { isAdmin: true });
+    mockGetDroppedAsset.mockResolvedValue({ dataObject: {} });
+    const app = makeApp();
+    const byDefault = await request(app).get("/api/wordhunt/admin/analytics").query(baseCreds);
+    const tooMany = await request(app).get("/api/wordhunt/admin/analytics").query({ ...baseCreds, days: 1000 });
+
+    expect(byDefault.body.data.days).toHaveLength(7);
+    expect(tooMany.body.data.days).toHaveLength(90);
+  });
+
+  test("an admin's replay after resetting their play isn't counted", async () => {
+    const visitor = mockVisitorWithGame(null, { isAdmin: true, replayDate: getBoardDate() });
+    const app = makeApp();
+    const started = await request(app).post("/api/wordhunt/start").query(baseCreds);
+    expect(started.body.data.game.isReplay).toBe(true);
+    // Saved without a "starts" event.
+    expect(visitor.updateDataObject).toHaveBeenCalledWith({ [`${DATA_KEY}.wordhunt.game`]: expect.anything() }, {});
+
+    mockVisitorWithGame(started.body.data.game, { isAdmin: true, replayDate: getBoardDate() });
+    const ended = await request(app).post("/api/wordhunt/end").query(baseCreds).send({ gameId: started.body.data.game.gameId });
+    await flushBackgroundWork();
+
+    expect(ended.body.data.game.endedAt).not.toBeNull();
+    const [, options] = mockVisitorForSave.updateDataObject.mock.calls[0];
+    expect(options).toEqual({});
+    expect(mockAnalyticsAsset.incrementDataObjectValue).not.toHaveBeenCalled();
+  });
+
+  test("a reset on an earlier day doesn't make today's game a replay", async () => {
+    mockVisitorWithGame(null, { isAdmin: true, replayDate: "2020-01-01" });
+    const res = await request(makeApp()).post("/api/wordhunt/start").query(baseCreds);
+    await flushBackgroundWork();
+
+    expect(res.body.data.game.isReplay).toBeUndefined();
+    expect(incrementedCounters()).toEqual({ [`wordHuntAnalytics.${getBoardDate()}.gamesStarted`]: 1 });
   });
 });

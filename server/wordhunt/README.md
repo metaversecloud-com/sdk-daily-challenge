@@ -56,12 +56,22 @@ Each player keeps their best score of the day. A game is recorded when it ends (
 | GET    | `/leaderboard` | –                    | `{ date, entries, me }` — today's top 10 scores and the caller's own rank |
 | POST   | `/admin/clear-leaderboard` | –        | Today's (now empty) leaderboard. World admins only (403 otherwise) |
 | POST   | `/admin/reset-play` | –                | `{ board, game: null }` — deletes the admin's own game for today so they can play again. World admins only |
+| GET    | `/admin/analytics?days=7` | –         | Daily stats for the last `days` board days (default 7, max 90), newest first, plus totals. World admins only |
 
 All responses are `{ success: true, data }`.
 
+## Analytics
+
+Recorded two ways, both without slowing down or failing a player's request:
+
+- **Topia analytics events** (Topia dashboard), attached to saves the game already makes, so they cost no extra requests. Each is counted once per game (`uniqueKey: <profileId>-<gameId>`): `starts`, `completions`, `quits` / `timeouts`, `wordsFound` / `pointsScored` / `longWordsFound` (with `incrementBy`), `wordOfTheDayFound`, plus `badgesAwarded` once per player per badge.
+- **Per-day counters** on the dropped asset under `wordHuntAnalytics.<board date>` (`utils/analytics.ts`), added with atomic `incrementDataObjectValue` calls in the background: `gamesStarted`, `gamesCompleted`, `gamesQuit`, `gamesTimedOut`, `gamesWithNoWords`, `wordsFound`, `pointsScored`, `secondsPlayed`, `longWordsFound`, `wordOfTheDayFound`.
+
+`GET /admin/analytics` reads the counters and adds `completionRate`, `quitRate`, `averageWordsFound`, `averageScore`, `averageSecondsPlayed`, and `wordOfTheDayFindRate` (averages are per finished game; rates are `null` on days with no games). Games are counted on their board's date. Admin replays (an admin's games after "Reset my play", marked `isReplay`) are left out of both the Topia events and the counters; they still count on the leaderboard and toward the admin's own stats and badges. Admins can see the stats in the admin popup (**View stats**: totals plus a row per day for the last 7, 30, or 90 days). Counters are kept indefinitely (about a dozen numbers per day).
+
 ## Admin tools
 
-World admins see a gear button on the start and results screens (not during a game). It opens a popup to **clear today's leaderboard** or **reset their own play for today**, so they can test the board repeatedly. `GET /game-state` returns `isAdmin`, which only controls whether the button is shown; each admin route checks admin status with Topia (`Visitor.get`) itself. Resetting keeps the admin's lifetime stats and badges, so repeated test games still count toward them. On the dev mock server everyone is an admin unless `WORDHUNT_MOCK_ADMIN=false`.
+World admins see a gear button on the start and results screens (not during a game). It opens a popup to **view stats**, **clear today's leaderboard**, or **reset their own play for today**, so they can test the board repeatedly. `GET /game-state` returns `isAdmin`, which only controls whether the button is shown; each admin route checks admin status with Topia (`Visitor.get`) itself. Resetting keeps the admin's lifetime stats and badges, so repeated test games still count toward them. On the dev mock server everyone is an admin unless `WORDHUNT_MOCK_ADMIN=false`.
 
 ## Not yet implemented (quality-of-life features)
 

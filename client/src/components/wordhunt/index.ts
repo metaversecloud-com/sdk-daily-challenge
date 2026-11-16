@@ -7,3 +7,4 @@ export * from "./WordHuntBadges.js";
 export * from "./WordHuntTabs.js";
 export * from "./WordHuntWordOfTheDayPanel.js";
 export * from "./WordHuntAdminModal.js";
+export * from "./WordHuntAdminStats.js";

@@ -10,20 +10,27 @@
  *   WORDHUNT_GAME_SECONDS=15 npx tsx wordhunt/dev/mockServer.ts   # shorter games for testing
  *   WORDHUNT_MOCK_LATENCY_MS=400 npx tsx wordhunt/dev/mockServer.ts   # delay every response, like a slow Topia API
  *   WORDHUNT_MOCK_ADMIN=false npx tsx wordhunt/dev/mockServer.ts   # play as a non-admin (everyone is an admin by default)
+ *   WORDHUNT_MOCK_PORT=3010 npx tsx wordhunt/dev/mockServer.ts   # use another port (the client proxies /api to 3000)
  *
  * Then run the client (`npm run dev` in client/) and open:
  *   http://localhost:3001/?assetId=local&interactiveNonce=local&interactivePublicKey=local&urlSlug=local&visitorId=1&sceneDropId=local&profileId=local
  */
 import http from "http";
 import { randomUUID } from "crypto";
-import { WordHuntGame, WordHuntStats, WordHuntSubmitResult } from "@shared/types/wordhunt/WordHuntTypes.js";
-import { buildBadgeList, getNewBadgeNames, recordFinishedGame } from "../utils/badges.js";
+import {
+  WordHuntAnalyticsCounters,
+  WordHuntGame,
+  WordHuntStats,
+  WordHuntSubmitResult,
+} from "@shared/types/wordhunt/WordHuntTypes.js";
+import { buildAnalyticsResponse, getFinishedGameIncrements, MAX_ANALYTICS_DAYS, toCounters } from "../utils/analyticsSummary.js";
+import { buildBadgeList, getNewBadgeNames, LONG_WORD_LENGTH, recordFinishedGame } from "../utils/badges.js";
 import { getBoardDate, getDailyBoard, getDailyWordPoints, getWordFromPath } from "../utils/board.js";
 import { getPointsForWord, GAME_DURATION_MS, LEADERBOARD_SIZE, MIN_WORD_LENGTH, SUBMISSION_GRACE_MS } from "../utils/constants.js";
 import { isValidWord } from "../utils/dictionary.js";
-import { getRevealedWordOfTheDay } from "../utils/wordOfTheDay.js";
+import { getRevealedWordOfTheDay, getWordOfTheDay } from "../utils/wordOfTheDay.js";
 
-const PORT = 3000;
+const PORT = Number(process.env.WORDHUNT_MOCK_PORT) || 3000;
 const GAME_DURATION = process.env.WORDHUNT_GAME_SECONDS ? Number(process.env.WORDHUNT_GAME_SECONDS) * 1000 : GAME_DURATION_MS;
 
 // One game per visitorId, in memory.
@@ -40,6 +47,28 @@ const recordFinish = (visitorId: string, game: WordHuntGame) => {
 
 // Today's best score per visitorId (leaderboard.ts needs the Topia SDK, so the mock keeps its own copy of the logic).
 const leaderboard = { date: "", scores: new Map<string, { name: string; score: number }>() };
+
+// Per-day analytics counters, same shape as the real server's `wordHuntAnalytics` on the dropped asset.
+const analytics: Record<string, WordHuntAnalyticsCounters> = {};
+const addToAnalytics = (date: string, increments: Partial<WordHuntAnalyticsCounters>) => {
+  const counters = (analytics[date] ??= toCounters(undefined));
+  for (const [name, amount] of Object.entries(increments)) counters[name as keyof WordHuntAnalyticsCounters] += amount;
+};
+// Board date each visitor last used "Reset my play" on; their later games that day are replays (not counted).
+const replayDates = new Map<string, string>();
+const recordFinishAnalytics = (game: WordHuntGame) =>
+  !game.isReplay &&
+  addToAnalytics(
+    game.board.date,
+    getFinishedGameIncrements({
+      wordsFound: game.foundWords.length,
+      score: game.score,
+      secondsPlayed: Math.round(((game.endedAt ?? game.endsAt) - game.startedAt) / 1000),
+      endReason: game.endReason,
+      longWordsFound: game.foundWords.filter(({ word }) => word.length >= LONG_WORD_LENGTH).length,
+      foundWordOfTheDay: game.foundWords.some(({ word }) => word === getWordOfTheDay(game.board.date)?.word),
+    }),
+  );
 
 // Each finished game is recorded once, like the real server, so an admin clearing the board isn't undone by the next fetch.
 const recordedGameIds = new Set<string>();
@@ -118,9 +147,17 @@ const server = http.createServer((req, res) => {
         leaderboard.scores.clear();
         return ok(getLeaderboard(visitorId));
 
+      case "GET /api/wordhunt/admin/analytics": {
+        if (!IS_ADMIN) return sendJson(res, 403, { success: false, error: "Only world admins can do that." });
+        const requested = Number(url.searchParams.get("days"));
+        const days = Number.isInteger(requested) && requested > 0 ? Math.min(requested, MAX_ANALYTICS_DAYS) : 7;
+        return ok(buildAnalyticsResponse(analytics, getBoardDate(), days));
+      }
+
       case "POST /api/wordhunt/admin/reset-play":
         if (!IS_ADMIN) return sendJson(res, 403, { success: false, error: "Only world admins can do that." });
         games.delete(visitorId);
+        replayDates.set(visitorId, board.date);
         return ok({ board, game: null, isAdmin: true });
 
       case "GET /api/wordhunt/leaderboard":
@@ -141,6 +178,7 @@ const server = http.createServer((req, res) => {
         if (!isActive) {
           const now = Date.now();
           game = {
+            ...(replayDates.get(visitorId) === board.date && { isReplay: true }),
             gameId: randomUUID(),
             board,
             startedAt: now,
@@ -151,6 +189,7 @@ const server = http.createServer((req, res) => {
             foundWords: [],
           };
           games.set(visitorId, game);
+          if (!game.isReplay) addToAnalytics(game.board.date, { gamesStarted: 1 });
         }
         return ok({ board, game, validWords: getValidWords(game) });
       }
@@ -181,6 +220,7 @@ const server = http.createServer((req, res) => {
           game.endedAt = Math.min(now, game.endsAt);
           game.endReason = now >= game.endsAt - 2000 ? "timeout" : "quit";
           newBadges = recordFinish(visitorId, game);
+          recordFinishAnalytics(game);
           recordScore(visitorId, displayName, game);
         }
         return ok({ board, game, newBadges, wordOfTheDay: getRevealedWordOfTheDay(game) });
