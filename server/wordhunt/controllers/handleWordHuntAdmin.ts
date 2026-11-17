@@ -34,7 +34,15 @@ export const handleResetWordHuntPlay = async (req: Request, res: Response) => {
 
     const board = getDailyBoard();
     await resetGame(credentials, board.date);
-    const data: WordHuntGameStateResponse = { board, game: null, serverTime: Date.now(), isAdmin: true };
+    // Both modes' games for today were deleted.
+    const data: WordHuntGameStateResponse = {
+      board,
+      game: null,
+      serverTime: Date.now(),
+      isAdmin: true,
+      mode: "classic",
+      modes: { classic: "not_started", golden: "not_started" },
+    };
     return res.json({ success: true, data });
   } catch (error) {
     return errorHandler({

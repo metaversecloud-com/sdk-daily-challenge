@@ -8,3 +8,4 @@ export * from "./WordHuntTabs.js";
 export * from "./WordHuntWordOfTheDayPanel.js";
 export * from "./WordHuntAdminModal.js";
 export * from "./WordHuntAdminStats.js";
+export * from "./WordHuntGoldenStatus.js";

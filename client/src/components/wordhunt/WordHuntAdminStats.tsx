@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 // types
-import { WordHuntAnalyticsResponse, WordHuntAnalyticsSummary } from "@shared/types/wordhunt/WordHuntTypes";
+import { WordHuntAnalyticsResponse, WordHuntAnalyticsSummary, WordHuntMode } from "@shared/types/wordhunt/WordHuntTypes";
 
 // utils
 import { backendAPI } from "@/utils";
@@ -24,6 +24,11 @@ const SUMMARY: { label: string; value: (totals: WordHuntAnalyticsSummary) => str
   { label: "Found word of the day", value: (t) => formatPercent(t.wordOfTheDayFindRate) },
 ];
 
+const GOLDEN_SUMMARY: typeof SUMMARY = [
+  { label: "Avg. golden words", value: (t) => formatNumber(t.averageGoldenLetterWords) },
+  { label: "Reached a goal", value: (t) => formatPercent(t.goalReachedRate) },
+];
+
 interface WordHuntAdminStatsProps {
   onBack: () => void;
 }
@@ -32,6 +37,9 @@ interface WordHuntAdminStatsProps {
 export const WordHuntAdminStats = ({ onBack }: WordHuntAdminStatsProps) => {
   const headingRef = useRef<HTMLHeadingElement>(null);
   const [days, setDays] = useState(RANGES[0]);
+  // Both modes added together by default; or one mode at a time.
+  const [mode, setMode] = useState<WordHuntMode | "all">("all");
+  const isGolden = mode === "golden";
   const [analytics, setAnalytics] = useState<WordHuntAnalyticsResponse | null>(null);
   const [error, setError] = useState("");
 
@@ -42,13 +50,13 @@ export const WordHuntAdminStats = ({ onBack }: WordHuntAdminStatsProps) => {
     setAnalytics(null);
     setError("");
     backendAPI
-      .get("/wordhunt/admin/analytics", { params: { days } })
+      .get("/wordhunt/admin/analytics", { params: { days, mode } })
       .then((response) => isCurrent && setAnalytics(response.data.data as WordHuntAnalyticsResponse))
       .catch((err) => isCurrent && setError(err?.response?.data?.error || "Couldn't load stats. Please try again."));
     return () => {
       isCurrent = false;
     };
-  }, [days]);
+  }, [days, mode]);
 
   return (
     <section className="wh-admin-stats" aria-labelledby="wh-admin-stats-title">
@@ -56,6 +64,19 @@ export const WordHuntAdminStats = ({ onBack }: WordHuntAdminStatsProps) => {
         <h3 ref={headingRef} className="h4" id="wh-admin-stats-title" tabIndex={-1}>
           Word Hunt stats
         </h3>
+        <label className="p3" htmlFor="wh-admin-stats-mode">
+          Mode{" "}
+          <select
+            id="wh-admin-stats-mode"
+            className="input"
+            value={mode}
+            onChange={(event) => setMode(event.target.value as WordHuntMode | "all")}
+          >
+            <option value="all">All modes</option>
+            <option value="classic">Classic</option>
+            <option value="golden">Golden Letter</option>
+          </select>
+        </label>
         <label className="p3" htmlFor="wh-admin-stats-range">
           Show{" "}
           <select
@@ -84,7 +105,7 @@ export const WordHuntAdminStats = ({ onBack }: WordHuntAdminStatsProps) => {
       ) : (
         <>
           <dl className="wh-stats-summary">
-            {SUMMARY.map(({ label, value }) => (
+            {[...SUMMARY, ...(isGolden ? GOLDEN_SUMMARY : [])].map(({ label, value }) => (
               <div key={label} className="wh-stats-summary-item">
                 <dt className="p3">{label}</dt>
                 <dd>{value(analytics.totals)}</dd>
@@ -96,7 +117,7 @@ export const WordHuntAdminStats = ({ onBack }: WordHuntAdminStatsProps) => {
           <div className="wh-stats-table-wrap" tabIndex={0} role="region" aria-labelledby="wh-stats-caption">
             <table className="wh-stats-table p3">
               <caption id="wh-stats-caption" className="sr-only">
-                Word Hunt stats by day, newest first
+                Word Hunt {mode === "all" ? "" : `${isGolden ? "Golden Letter" : "Classic"} `}stats by day, newest first
               </caption>
               <thead>
                 <tr>
@@ -109,6 +130,8 @@ export const WordHuntAdminStats = ({ onBack }: WordHuntAdminStatsProps) => {
                   <th scope="col">Avg. score</th>
                   <th scope="col">Avg. time</th>
                   <th scope="col">Found WOTD</th>
+                  {isGolden && <th scope="col">Avg. golden</th>}
+                  {isGolden && <th scope="col">Goal reached</th>}
                 </tr>
               </thead>
               <tbody>
@@ -123,6 +146,8 @@ export const WordHuntAdminStats = ({ onBack }: WordHuntAdminStatsProps) => {
                     <td>{formatNumber(day.averageScore)}</td>
                     <td>{formatDuration(day.averageSecondsPlayed)}</td>
                     <td>{formatPercent(day.wordOfTheDayFindRate)}</td>
+                    {isGolden && <td>{formatNumber(day.averageGoldenLetterWords)}</td>}
+                    {isGolden && <td>{formatPercent(day.goalReachedRate)}</td>}
                   </tr>
                 ))}
               </tbody>
@@ -130,8 +155,8 @@ export const WordHuntAdminStats = ({ onBack }: WordHuntAdminStatsProps) => {
           </div>
 
           <p className="p3">
-            Averages are per finished game. Admin replays (games after "Reset my play") aren't counted. WOTD = word
-            of the day.
+            {mode === "all" ? "Classic and Golden Letter games together. " : ""}Averages are per finished game. Admin
+            replays (games after "Reset my play") aren't counted. WOTD = word of the day.
           </p>
         </>
       )}

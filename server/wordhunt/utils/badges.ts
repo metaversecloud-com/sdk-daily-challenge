@@ -4,6 +4,7 @@ import {
   WordHuntGame,
   WordHuntStats,
 } from "@shared/types/wordhunt/WordHuntTypes.js";
+import { isGoldenWord } from "@shared/wordhunt/golden.js";
 
 type BadgeDefinition = {
   slug: string;
@@ -11,6 +12,8 @@ type BadgeDefinition = {
   name: string;
   description: string;
   category: WordHuntBadgeCategory;
+  /** Picture file type in client/public/badges (default png). */
+  imageType?: "png" | "svg";
   /** For badges that count something: how much is needed and how much the player has. */
   target?: number;
   current?: (stats: WordHuntStats) => number;
@@ -109,6 +112,22 @@ export const BADGES: BadgeDefinition[] = [
     // Set by finishGame when the player's score is the highest on today's leaderboard (ties count).
     isEarned: (s) => s.wonCrown,
   },
+  {
+    slug: "gold-rush",
+    name: "Gold Rush!",
+    description: "Find 5 words with the golden letter in a row in a Golden Letter game.",
+    category: "golden",
+    imageType: "svg",
+    ...atLeast((s) => s.goldenBestStreak ?? 0, 5),
+  },
+  {
+    slug: "midas-touch",
+    name: "Midas Touch",
+    description: "Find 10 words with the golden letter in one Golden Letter game.",
+    category: "golden",
+    imageType: "svg",
+    ...atLeast((s) => s.goldenMostWords ?? 0, 10),
+  },
 ];
 
 export const LONG_WORD_LENGTH = 7;
@@ -122,6 +141,8 @@ export const emptyStats = (): WordHuntStats => ({
   foundTopia: false,
   foundLongWord: false,
   wonCrown: false,
+  goldenBestStreak: 0,
+  goldenMostWords: 0,
 });
 
 /** Whole days since 1970-01-01 for a YYYY-MM-DD board date. */
@@ -151,6 +172,23 @@ export const recordFinishedGame = (stats: WordHuntStats | undefined, game: WordH
     foundLongWord: previous.foundLongWord || game.foundWords.some(({ word }) => word.length >= LONG_WORD_LENGTH),
     // Leaderboard placement isn't part of the game itself, so finishGame sets this after recording the score.
     wonCrown: previous.wonCrown,
+    // Golden bests carry over unchanged; only golden games update them (recordFinishedGoldenGame).
+    goldenBestStreak: previous.goldenBestStreak,
+    goldenMostWords: previous.goldenMostWords,
+  };
+};
+
+/**
+ * Returns new stats that include a golden game that just finished. Only the golden bests change: golden games
+ * don't count toward games played, scores, or streaks. Pure: does not change `stats`.
+ */
+export const recordFinishedGoldenGame = (stats: WordHuntStats | undefined, game: WordHuntGame): WordHuntStats => {
+  const previous = { ...emptyStats(), ...stats };
+  const goldenWords = game.foundWords.filter(({ word }) => isGoldenWord(word, game.board.goldenLetter)).length;
+  return {
+    ...previous,
+    goldenBestStreak: Math.max(previous.goldenBestStreak ?? 0, game.goldenBestStreak ?? 0),
+    goldenMostWords: Math.max(previous.goldenMostWords ?? 0, goldenWords),
   };
 };
 
@@ -173,6 +211,14 @@ export const buildBadgeList = (
     const earned = badge.isEarned(full) || owned.has(badge.name);
     const progress =
       badge.target && badge.current ? { current: Math.min(badge.current(full), badge.target), target: badge.target } : null;
-    return { slug: badge.slug, name: badge.name, description: badge.description, category: badge.category, earned, progress };
+    return {
+      slug: badge.slug,
+      image: `/badges/${badge.slug}.${badge.imageType ?? "png"}`,
+      name: badge.name,
+      description: badge.description,
+      category: badge.category,
+      earned,
+      progress,
+    };
   });
 };

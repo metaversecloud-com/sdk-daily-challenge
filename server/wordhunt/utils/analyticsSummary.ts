@@ -20,6 +20,10 @@ export const ANALYTICS_COUNTERS: (keyof WordHuntAnalyticsCounters)[] = [
   "secondsPlayed",
   "longWordsFound",
   "wordOfTheDayFound",
+  "goldenLetterWordsFound",
+  "goalsBronze",
+  "goalsSilver",
+  "goalsGold",
 ];
 
 export const MAX_ANALYTICS_DAYS = 90;
@@ -50,6 +54,8 @@ export const summarize = (counters: WordHuntAnalyticsCounters): WordHuntAnalytic
   averageScore: ratio(counters.pointsScored, counters.gamesCompleted, 0),
   averageSecondsPlayed: ratio(counters.secondsPlayed, counters.gamesCompleted, 0),
   wordOfTheDayFindRate: ratio(counters.wordOfTheDayFound, counters.gamesCompleted),
+  averageGoldenLetterWords: ratio(counters.goldenLetterWordsFound, counters.gamesCompleted, 1),
+  goalReachedRate: ratio(counters.goalsBronze + counters.goalsSilver + counters.goalsGold, counters.gamesCompleted),
 });
 
 /** The `days` board dates ending at (and including) `today`, newest first. */
@@ -58,6 +64,19 @@ export const getRecentDates = (today: string, days: number) => {
   return Array.from({ length: days }, (_, offset) =>
     new Date(Date.UTC(year, month - 1, day - offset)).toISOString().slice(0, 10),
   );
+};
+
+/** Adds several stored `{ [date]: counters }` maps (e.g. one per game mode) into one. */
+export const combineStoredCounters = (maps: (Record<string, unknown> | undefined)[]) => {
+  const combined: Record<string, WordHuntAnalyticsCounters> = {};
+  for (const map of maps) {
+    for (const [date, stored] of Object.entries(map ?? {})) {
+      const counters = toCounters(stored);
+      const total = (combined[date] ??= emptyCounters());
+      for (const name of ANALYTICS_COUNTERS) total[name] += counters[name];
+    }
+  }
+  return combined;
 };
 
 /** Builds the analytics response from the stored `{ [date]: counters }` map. */
@@ -83,6 +102,8 @@ export const getFinishedGameIncrements = ({
   endReason,
   longWordsFound,
   foundWordOfTheDay,
+  goldenLetterWordsFound = 0,
+  medal = null,
 }: {
   wordsFound: number;
   score: number;
@@ -90,6 +111,9 @@ export const getFinishedGameIncrements = ({
   endReason: "quit" | "timeout" | null;
   longWordsFound: number;
   foundWordOfTheDay: boolean;
+  /** Golden mode only. */
+  goldenLetterWordsFound?: number;
+  medal?: "bronze" | "silver" | "gold" | null;
 }): Partial<WordHuntAnalyticsCounters> => {
   const increments: Partial<WordHuntAnalyticsCounters> = {
     gamesCompleted: 1,
@@ -100,6 +124,8 @@ export const getFinishedGameIncrements = ({
     longWordsFound,
     wordOfTheDayFound: foundWordOfTheDay ? 1 : 0,
     gamesWithNoWords: wordsFound === 0 ? 1 : 0,
+    goldenLetterWordsFound,
+    ...(medal && { [`goals${medal[0].toUpperCase()}${medal.slice(1)}`]: 1 }),
   };
   // Skip zeros so a finished game only sends the counters it actually changes.
   return Object.fromEntries(Object.entries(increments).filter(([, value]) => value)) as Partial<WordHuntAnalyticsCounters>;

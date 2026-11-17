@@ -15,6 +15,23 @@ Single-player, 2-minute word game. Every player gets the same 5x5 board each day
 
 A "Qu" tile counts as two letters.
 
+## Game modes
+
+Picked on the start screen. Each mode has its own daily board (its own seed), one game per player per day, its own daily leaderboard, and its own analytics. Every route takes `?mode=classic|golden` (missing means classic; unknown is a 400).
+
+- **Classic**: the original game. Its board, saved data, leaderboard (`dailyLeaderboard`), and analytics are unchanged.
+- **Golden Letter** (`golden`):
+  - **Golden letter**: each day's golden board has a golden letter (`utils/board.ts` → `pickGoldenLetter`): a single-letter tile found in 15–35% of that board's words, preferring consonants and letters on fewer tiles (a random letter would range from 0% to 70%+). Golden tiles are gold with a ★.
+  - **Scoring** (`shared/wordhunt/golden.ts`, used by both server and client so instant feedback always matches): a word with the golden letter scores ×2 (once per word). Each golden word in a row adds 0.5×: ×2, ×2.5, ×3, ×3.5, up to ×4. A non-golden word resets the streak; invalid attempts don't. The streak is saved with each word (`game.goldenStreak`).
+  - **Goals**: bronze/silver/gold are the points from the board's 8/15/25 easiest words (shortest, then most common), with golden words doubled, rounded to 100 (`getGoals`). Shown on the start screen, during play, and as a medal on the results screen.
+  - **Look**: a warm gold theme (tokens in `client/src/styles/tokens.css`).
+  - **Golden badges** (in the same Badges tab, under "Golden Letter"): **Gold Rush!** (5 golden words in a row in one game) and **Midas Touch** (10 golden words in one game). Golden games only update two golden bests on the player's stats (`goldenBestStreak`, `goldenMostWords`), so they never count toward the classic badges, games played, scores, or streaks. The pictures are placeholder SVGs in `client/public/badges/`; like the other badges, they're granted from the Topia ecosystem inventory by name, so items named exactly `Gold Rush!` and `Midas Touch` must exist there.
+  - **Kept separate from classic**: saved under `<urlSlug>-<sceneDropId>.wordhunt.golden`, ranked on `goldenDailyLeaderboard`, and counted in `wordHuntGoldenAnalytics`.
+
+**Analytics count both modes.** Every game records the shared Topia events (`starts`, `completions`, …), so dashboard totals include both modes; golden games also record prefixed copies (`goldenStarts`, `goldenCompletions`, …) plus golden-only ones (`goldenLetterWordsFound`, `golden<Medal>Goals`), so golden can be viewed on its own (classic alone = shared total minus golden). The admin stats view and `GET /admin/analytics` add both modes together by default (`?mode=all`), or show one mode (`?mode=classic|golden`).
+
+Opening Word Hunt resumes a game in progress in either mode, shows the results once both modes are played today, and otherwise shows the start screen. Admin **Reset my play** resets both modes, **Clear leaderboard** clears both, and the stats view has a mode filter.
+
 ## How it works
 
 - **Daily board** (`utils/board.ts`): rolled from the Big Boggle letter dice using a PRNG seeded by the date, so every player and server instance gets the same board. The board rolls over at midnight in `WORDHUNT_TIMEZONE` (default `America/Los_Angeles`). A board is re-rolled (deterministically) until it has at least 150 findable words.

@@ -1,4 +1,4 @@
-import { buildBadgeList, getNewBadgeNames, recordFinishedGame } from "../../wordhunt/utils/badges.js";
+import { buildBadgeList, getNewBadgeNames, recordFinishedGame, recordFinishedGoldenGame } from "../../wordhunt/utils/badges.js";
 import { isValidWord } from "../../wordhunt/utils/dictionary.js";
 
 const makeGame = (date: string, score = 0, words: string[] = []): any => ({
@@ -56,6 +56,44 @@ describe("wordhunt badges", () => {
   test("a badge already in the inventory shows as earned", () => {
     const badges = buildBadgeList(undefined, ["CROWN!"]);
     expect(badges.find((b) => b.slug === "crown")?.earned).toBe(true);
-    expect(badges).toHaveLength(12);
+    expect(badges).toHaveLength(14);
+  });
+
+  const goldenGame = (foundWords: string[], goldenBestStreak: number): any => ({
+    ...makeGame("2026-01-01", 0, foundWords),
+    mode: "golden",
+    goldenBestStreak,
+    board: { date: "2026-01-01", size: 5, tiles: [], goldenLetter: "t" },
+  });
+
+  test("Gold Rush! needs 5 golden words in a row; Midas Touch needs 10 golden words in one game", () => {
+    const tenGolden = ["cat", "tab", "bat", "rat", "mat", "hat", "sat", "pat", "fat", "vat", "dog"];
+    let stats = recordFinishedGoldenGame(undefined, goldenGame(tenGolden.slice(0, 4), 4));
+    expect(getNewBadgeNames(undefined, stats)).toEqual([]);
+    expect(buildBadgeList(stats).find((b) => b.slug === "gold-rush")?.progress).toEqual({ current: 4, target: 5 });
+
+    const next = recordFinishedGoldenGame(stats, goldenGame(tenGolden, 5));
+    expect(getNewBadgeNames(stats, next)).toEqual(["Gold Rush!", "Midas Touch"]);
+    stats = next;
+    // Bests never go down.
+    expect(recordFinishedGoldenGame(stats, goldenGame(["cat"], 1))).toMatchObject({ goldenBestStreak: 5, goldenMostWords: 10 });
+  });
+
+  test("golden games only change the golden bests, never the classic stats", () => {
+    const classic = recordFinishedGame(undefined, makeGame("2026-01-01", 5000, ["planets"]));
+    const after = recordFinishedGoldenGame(classic, goldenGame(["cat", "tab"], 2));
+    expect(after).toEqual({ ...classic, goldenBestStreak: 2, goldenMostWords: 2 });
+    // ...and classic games keep the golden bests.
+    expect(recordFinishedGame(after, makeGame("2026-01-02", 100))).toMatchObject({ goldenBestStreak: 2, goldenMostWords: 2 });
+  });
+
+  test("the golden badges are in their own group with their own pictures", () => {
+    const golden = buildBadgeList(undefined).filter((b) => b.category === "golden");
+    expect(golden.map((b) => [b.name, b.image])).toEqual([
+      ["Gold Rush!", "/badges/gold-rush.svg"],
+      ["Midas Touch", "/badges/midas-touch.svg"],
+    ]);
+    expect(buildBadgeList(undefined).find((b) => b.slug === "crown")?.image).toBe("/badges/crown.png");
   });
 });
+

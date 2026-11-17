@@ -1,4 +1,4 @@
-import { WordHuntGame, WordHuntWordOfTheDay } from "@shared/types/wordhunt/WordHuntTypes.js";
+import { WordHuntGame, WordHuntMode, WordHuntWordOfTheDay } from "@shared/types/wordhunt/WordHuntTypes.js";
 import { getBoardDate, getDailyWords, MAX_CACHED_DATES } from "./board.js";
 import { getPointsForWord } from "./constants.js";
 import { getDefinition, getWordFrequency } from "./definitions.js";
@@ -26,14 +26,15 @@ export const pickWordOfTheDay = (words: Iterable<string>): WordHuntWordOfTheDay 
 
 const cache = new Map<string, WordHuntWordOfTheDay | null>();
 
-/** The word of the day for a board date. Computed once per date, since every player gets the same board. */
-export const getWordOfTheDay = (date = getBoardDate()) => {
-  if (!cache.has(date)) {
-    cache.set(date, pickWordOfTheDay(getDailyWords(date)));
-    // Keep the same few days as the board cache, oldest dropped first.
-    if (cache.size > MAX_CACHED_DATES) cache.delete(cache.keys().next().value!);
+/** The word of the day for a board date and mode. Computed once per board, since every player gets the same one. */
+export const getWordOfTheDay = (date = getBoardDate(), mode: WordHuntMode = "classic") => {
+  const key = `${mode}:${date}`;
+  if (!cache.has(key)) {
+    cache.set(key, pickWordOfTheDay(getDailyWords(date, mode)));
+    // Keep the same few days as the board cache (both modes), oldest dropped first.
+    if (cache.size > MAX_CACHED_DATES * 2) cache.delete(cache.keys().next().value!);
   }
-  return cache.get(date) ?? null;
+  return cache.get(key) ?? null;
 };
 
 /**
@@ -41,4 +42,6 @@ export const getWordOfTheDay = (date = getBoardDate()) => {
  * today's board has ended, so it can't be read from the network while they're still playing.
  */
 export const getRevealedWordOfTheDay = (game: WordHuntGame | null) =>
-  game?.endedAt && game.board.date === getBoardDate() ? getWordOfTheDay(game.board.date) ?? undefined : undefined;
+  game?.endedAt && game.board.date === getBoardDate()
+    ? getWordOfTheDay(game.board.date, game.mode ?? "classic") ?? undefined
+    : undefined;

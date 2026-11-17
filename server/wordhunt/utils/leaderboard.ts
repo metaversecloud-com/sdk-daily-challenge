@@ -1,5 +1,7 @@
 import {
+  WORD_HUNT_MODES,
   WordHuntGame,
+  WordHuntMode,
   WordHuntLeaderboardEntry,
   WordHuntLeaderboardResponse,
 } from "@shared/types/wordhunt/WordHuntTypes.js";
@@ -27,12 +29,19 @@ export const parseLeaderboard = (scores?: Record<string, string>): WordHuntLeade
     .map((entry, index) => ({ ...entry, rank: index + 1 }));
 };
 
-/** Today's leaderboard. Scores stored for an earlier date are ignored. */
-export const getDailyLeaderboard = async (credentials: Credentials): Promise<WordHuntLeaderboardResponse> => {
+/** Each mode has its own daily leaderboard on the dropped asset (classic keeps its original key). */
+const getLeaderboardKey = (mode: WordHuntMode) =>
+  mode === "classic" ? ("dailyLeaderboard" as const) : ("goldenDailyLeaderboard" as const);
+
+/** Today's leaderboard for a mode. Scores stored for an earlier date are ignored. */
+export const getDailyLeaderboard = async (
+  credentials: Credentials,
+  mode: WordHuntMode = "classic",
+): Promise<WordHuntLeaderboardResponse> => {
   try {
     const date = getBoardDate();
     const droppedAsset = await getDroppedAsset(credentials);
-    const stored = droppedAsset.dataObject?.dailyLeaderboard;
+    const stored = droppedAsset.dataObject?.[getLeaderboardKey(mode)];
 
     const ranked = stored?.date === date ? parseLeaderboard(stored.scores) : [];
     const me = ranked.find((entry) => entry.profileId === credentials.profileId) || null;
@@ -44,8 +53,8 @@ export const getDailyLeaderboard = async (credentials: Credentials): Promise<Wor
 };
 
 /**
- * Records a finished game on today's leaderboard, keeping each player's best score of the day.
- * The leaderboard lives on the dropped asset's data object:
+ * Records a finished game on today's leaderboard for its mode, keeping each player's best score of the day.
+ * The leaderboard lives on the dropped asset's data object (`goldenDailyLeaderboard` for golden games):
  *
  *   dailyLeaderboard: { date: "YYYY-MM-DD", scores: { [profileId]: "displayName|score" } }
  *
@@ -59,16 +68,17 @@ export const recordDailyScore = async ({ credentials, game }: { credentials: Cre
     if (game.board.date !== date || game.score <= 0) return;
 
     const droppedAsset = await getDroppedAsset(credentials);
-    const stored = droppedAsset.dataObject?.dailyLeaderboard;
+    const key = getLeaderboardKey(game.mode ?? "classic");
+    const stored = droppedAsset.dataObject?.[key];
     // "|" is the field separator in the stored string.
     const entry = `${(displayName || "Player").replace(/\|/g, "")}|${game.score}`;
 
     if (stored?.date === date) {
       const previousScore = parseInt((stored.scores?.[profileId] || "").split("|")[1], 10) || 0;
       if (previousScore >= game.score) return;
-      await droppedAsset.updateDataObject({ [`dailyLeaderboard.scores.${profileId}`]: entry }, {});
+      await droppedAsset.updateDataObject({ [`${key}.scores.${profileId}`]: entry }, {});
     } else {
-      await droppedAsset.updateDataObject({ dailyLeaderboard: { date, scores: { [profileId]: entry } } }, {});
+      await droppedAsset.updateDataObject({ [key]: { date, scores: { [profileId]: entry } } }, {});
     }
   } catch (error) {
     throw standardizeError(error);
@@ -76,13 +86,13 @@ export const recordDailyScore = async ({ credentials, game }: { credentials: Cre
 };
 
 /**
- * Whether a finished game has the top score on today's leaderboard (a tie for first counts).
+ * Whether a finished game has the top score on today's leaderboard for its mode (a tie for first counts).
  * Call after the game's score has been recorded. Never throws: returns false if the leaderboard can't be read.
  */
 export const tryIsDailyLeader = async ({ credentials, game }: { credentials: Credentials; game: WordHuntGame }) => {
   try {
     if (game.board.date !== getBoardDate() || game.score <= 0) return false;
-    const { entries } = await getDailyLeaderboard(credentials);
+    const { entries } = await getDailyLeaderboard(credentials, game.mode ?? "classic");
     return entries.length > 0 && game.score >= entries[0].score;
   } catch (error) {
     errorHandler({ error, functionName: "tryIsDailyLeader", message: "Error checking the Word Hunt daily leader" });
@@ -90,11 +100,15 @@ export const tryIsDailyLeader = async ({ credentials, game }: { credentials: Cre
   }
 };
 
-/** Admin tool: removes every score from today's leaderboard. */
+/** Admin tool: removes every score from today's leaderboards (every mode). */
 export const clearDailyLeaderboard = async (credentials: Credentials) => {
   try {
     const droppedAsset = await getDroppedAsset(credentials);
-    await droppedAsset.updateDataObject({ dailyLeaderboard: { date: getBoardDate(), scores: {} } }, {});
+    const empty = { date: getBoardDate(), scores: {} };
+    await droppedAsset.updateDataObject(
+      Object.fromEntries(WORD_HUNT_MODES.map((mode) => [getLeaderboardKey(mode), empty])),
+      {},
+    );
   } catch (error) {
     throw standardizeError(error);
   }

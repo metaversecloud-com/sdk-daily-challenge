@@ -5,7 +5,7 @@ import { getWordHuntGameState } from "../utils/getWordHuntGameState.js";
 export const handleGetWordHuntState = async (req: Request, res: Response) => {
   try {
     const credentials = getCredentials(req.query);
-    const data = await getWordHuntGameState(credentials);
+    const data = await getWordHuntGameState(credentials, req.query);
     return res.json({ success: true, data });
   } catch (error) {
     return errorHandler({

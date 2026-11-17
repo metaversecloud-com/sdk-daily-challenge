@@ -5,5 +5,7 @@ export interface IDroppedAsset extends DroppedAssetInterface {
     leaderboard?: Record<string, string>;
     /** Word Hunt: today's best scores as `{ [profileId]: "displayName|score" }`, reset when the board date changes. */
     dailyLeaderboard?: { date: string; scores: Record<string, string> };
+    /** Word Hunt Golden Letter mode: same shape as dailyLeaderboard. */
+    goldenDailyLeaderboard?: { date: string; scores: Record<string, string> };
   };
 }
