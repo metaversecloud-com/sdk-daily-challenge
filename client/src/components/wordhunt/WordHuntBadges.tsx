@@ -14,6 +14,8 @@ const CATEGORIES: { id: WordHuntBadgeCategory; label: string }[] = [
   { id: "play", label: "Play" },
   { id: "score", label: "Score" },
   { id: "special", label: "Special" },
+  // Earned in Golden Letter mode.
+  { id: "golden", label: "Golden Letter" },
 ];
 
 interface WordHuntBadgesProps {
@@ -95,7 +97,7 @@ export const WordHuntBadges = ({ refreshKey }: WordHuntBadgesProps) => {
                     aria-pressed={badge.slug === selectedSlug}
                     onClick={() => setSelectedSlug(badge.slug)}
                   >
-                    <img src={`/badges/${badge.slug}.png`} alt="" width={88} height={88} />
+                    <img src={badge.image} alt="" width={88} height={88} />
                     <span className="wh-badge-name">{badge.name}</span>
                     <span className="sr-only">{badge.earned ? "Earned" : "Locked"}</span>
                   </button>

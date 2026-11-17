@@ -2,6 +2,25 @@
  * Word Hunt types shared between client and server.
  */
 
+/**
+ * Game modes. Each mode has its own daily board, one game per player per day, and its own leaderboard and analytics.
+ * - classic: the original game.
+ * - golden: a daily "golden letter"; words containing it score double, with a streak bonus for golden words in a
+ *   row, and bronze/silver/gold score goals. Golden games don't count toward badges or lifetime stats.
+ */
+export type WordHuntMode = "classic" | "golden";
+export const WORD_HUNT_MODES: WordHuntMode[] = ["classic", "golden"];
+
+/** Whether a player hasn't started today's board in a mode yet, is playing it, or has finished it. */
+export type WordHuntModeStatus = "not_started" | "in_progress" | "finished";
+
+/** Bronze, silver, and gold score targets for a golden board. */
+export interface WordHuntGoals {
+  bronze: number;
+  silver: number;
+  gold: number;
+}
+
 export interface WordHuntBoard {
   /** Board date (YYYY-MM-DD) in the server's board timezone. */
   date: string;
@@ -9,6 +28,10 @@ export interface WordHuntBoard {
   size: number;
   /** Tiles in row-major order. Each tile is one letter, except "Qu". */
   tiles: string[];
+  /** Golden mode only: today's golden letter (lowercase). */
+  goldenLetter?: string;
+  /** Golden mode only: today's score goals. */
+  goals?: WordHuntGoals;
 }
 
 export interface WordHuntFoundWord {
@@ -29,6 +52,12 @@ export interface WordHuntGame {
   foundWords: WordHuntFoundWord[];
   /** An admin's extra game after resetting their play (for testing). Left out of analytics. */
   isReplay?: boolean;
+  /** Golden mode only (missing means classic). */
+  mode?: WordHuntMode;
+  /** Golden mode only: how many golden words in a row the player has found (a non-golden word resets it). */
+  goldenStreak?: number;
+  /** Golden mode only: the longest golden streak reached this game (for the Gold Rush! badge). */
+  goldenBestStreak?: number;
 }
 
 export type WordHuntSubmitResult =
@@ -56,6 +85,10 @@ export interface WordHuntGameStateResponse {
   validWords?: Record<string, number>;
   /** Whether the player is an admin of this world (shows the admin tools). Only sent by GET /game-state. */
   isAdmin?: boolean;
+  /** Which mode this response is for. */
+  mode?: WordHuntMode;
+  /** Each mode's status for today, so the start screen can show both. Sent by GET /game-state and POST /start. */
+  modes?: Record<WordHuntMode, WordHuntModeStatus>;
 }
 
 export type WordHuntPartOfSpeech = "noun" | "verb" | "adjective" | "adverb";
@@ -79,6 +112,10 @@ export interface WordHuntSubmitWordResponse {
   result: WordHuntSubmitResult;
   word: string;
   points: number;
+  /** Golden mode: the multiplier applied to a valid word (1 when it has no golden letter). */
+  multiplier?: number;
+  /** Golden mode: golden words in a row after this word. */
+  goldenStreak?: number;
   game: WordHuntGame;
   serverTime: number;
 }
@@ -113,13 +150,21 @@ export interface WordHuntStats {
   foundTopia: boolean;
   /** Found a word with 7 or more letters. */
   foundLongWord: boolean;
+  /**
+   * Golden Letter bests, for the golden badges. These are the only stats golden games update (they don't count
+   * toward games played, scores, or streaks above). Missing on stats saved before golden badges existed.
+   */
+  goldenBestStreak?: number;
+  /** Most golden-letter words found in one golden game. */
+  goldenMostWords?: number;
 }
 
-export type WordHuntBadgeCategory = "play" | "score" | "special";
+export type WordHuntBadgeCategory = "play" | "score" | "special" | "golden";
 
 export interface WordHuntBadge {
-  /** Matches the picture at /badges/<slug>.png. */
   slug: string;
+  /** The badge picture's path, e.g. /badges/<slug>.png. */
+  image: string;
   /** Name of the badge item in the Topia ecosystem inventory. */
   name: string;
   description: string;
@@ -151,7 +196,7 @@ export interface WordHuntLeaderboardResponse {
 
 /** Raw per-day counters kept on the dropped asset under `wordHuntAnalytics.<YYYY-MM-DD>` (by board date). */
 export interface WordHuntAnalyticsCounters {
-  /** Games started (including admin replays). */
+  /** Games started (admin replays aren't counted). */
   gamesStarted: number;
   /** Games that ended, by quitting early or by the timer running out. */
   gamesCompleted: number;
@@ -167,6 +212,12 @@ export interface WordHuntAnalyticsCounters {
   longWordsFound: number;
   /** Finished games where the player found the word of the day. */
   wordOfTheDayFound: number;
+  /** Golden mode only (always 0 for classic): words containing the golden letter. */
+  goldenLetterWordsFound: number;
+  /** Golden mode only: finished games that reached each score goal (a gold game counts once, as gold). */
+  goalsBronze: number;
+  goalsSilver: number;
+  goalsGold: number;
 }
 
 /** Counters plus the rates and averages worked out from them, for one day or a range of days. */
@@ -180,6 +231,10 @@ export interface WordHuntAnalyticsSummary extends WordHuntAnalyticsCounters {
   averageSecondsPlayed: number | null;
   /** Share of finished games that found the word of the day (0–1). */
   wordOfTheDayFindRate: number | null;
+  /** Golden mode: golden-letter words per finished game. */
+  averageGoldenLetterWords: number | null;
+  /** Golden mode: share of finished games that reached at least the bronze goal (0–1). */
+  goalReachedRate: number | null;
 }
 
 export interface WordHuntAnalyticsDay extends WordHuntAnalyticsSummary {

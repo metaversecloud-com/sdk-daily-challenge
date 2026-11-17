@@ -5,6 +5,7 @@ import { getDailyBoard } from "../utils/board.js";
 import { finishGame, getWordHuntVisitor } from "../utils/gameState.js";
 import { tryRecordDailyScore } from "../utils/leaderboard.js";
 import { getRevealedWordOfTheDay } from "../utils/wordOfTheDay.js";
+import { parseMode, UNKNOWN_MODE_ERROR } from "../utils/mode.js";
 
 // Ending within this window of the timer running out counts as a timeout rather than quitting early.
 const TIMEOUT_TOLERANCE_MS = 2000;
@@ -12,9 +13,11 @@ const TIMEOUT_TOLERANCE_MS = 2000;
 export const handleEndWordHunt = async (req: Request, res: Response) => {
   try {
     const credentials = getCredentials(req.query);
+    const mode = parseMode(req.query.mode);
+    if (!mode) return res.status(400).json(UNKNOWN_MODE_ERROR);
     const { gameId } = req.body || {};
 
-    const { visitor, game, stats } = await getWordHuntVisitor(credentials);
+    const { visitor, game, stats, modes } = await getWordHuntVisitor(credentials, { mode });
     if (!game || game.gameId !== gameId) {
       return res.status(400).json({ success: false, error: "No Word Hunt game in progress" });
     }
@@ -29,11 +32,13 @@ export const handleEndWordHunt = async (req: Request, res: Response) => {
     }
 
     const data: WordHuntGameStateResponse = {
-      board: getDailyBoard(),
+      board: getDailyBoard(undefined, mode),
       game,
       serverTime: Date.now(),
       newBadges,
       wordOfTheDay: getRevealedWordOfTheDay(game),
+      mode,
+      modes: { ...modes, [mode]: "finished" },
     };
     return res.json({ success: true, data });
   } catch (error) {

@@ -436,7 +436,9 @@ describe("wordhunt admin tools", () => {
     const res = await request(makeApp()).post("/api/wordhunt/admin/clear-leaderboard").query(baseCreds);
 
     expect(res.status).toBe(200);
-    expect(asset.updateDataObject).toHaveBeenCalledWith({ dailyLeaderboard: { date: getBoardDate(), scores: {} } }, {});
+    // Both modes' leaderboards.
+    const empty = { date: getBoardDate(), scores: {} };
+    expect(asset.updateDataObject).toHaveBeenCalledWith({ dailyLeaderboard: empty, goldenDailyLeaderboard: empty }, {});
     // Admin status is checked with Topia (Visitor.get), not taken from the request.
     expect(mockGetVisitor).toHaveBeenCalledWith(expect.anything(), true, { includeInventory: false });
   });
@@ -457,7 +459,13 @@ describe("wordhunt admin tools", () => {
     // next games on this board are replays.
     expect(visitor.updateDataObject).toHaveBeenCalledTimes(1);
     expect(visitor.updateDataObject).toHaveBeenCalledWith(
-      { [`${DATA_KEY}.wordhunt.game`]: null, [`${DATA_KEY}.wordhunt.replayDate`]: getBoardDate() },
+      {
+        [`${DATA_KEY}.wordhunt.game`]: null,
+        [`${DATA_KEY}.wordhunt.replayDate`]: getBoardDate(),
+        // Golden mode's game too.
+        [`${DATA_KEY}.wordhunt.golden.game`]: null,
+        [`${DATA_KEY}.wordhunt.golden.replayDate`]: getBoardDate(),
+      },
       {},
     );
   });
@@ -609,3 +617,177 @@ describe("wordhunt analytics", () => {
     expect(incrementedCounters()).toEqual({ [`wordHuntAnalytics.${getBoardDate()}.gamesStarted`]: 1 });
   });
 });
+
+describe("wordhunt golden letter mode", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    clearGameCache();
+  });
+
+  const flush = () => new Promise((resolve) => setImmediate(resolve));
+  // Board row 0 is C A T S E and row 1 B C D F G, so "cat"/"cats" have the golden letter T and "cab" doesn't.
+  const goldenBoard = { ...testBoard, goldenLetter: "t", goals: { bronze: 1000, silver: 2000, gold: 3000 } };
+  const goldenGame = (overrides: object = {}) => makeGame({ mode: "golden", goldenStreak: 0, board: goldenBoard, ...overrides });
+  // Golden data lives under `.wordhunt.golden` on the visitor data object.
+  const mockGoldenVisitor = (game: object | null, extra: object = {}) => {
+    const visitor = {
+      isAdmin: false,
+      dataObject: { [DATA_KEY]: { dateStarted: 1, wordhunt: { golden: { ...(game && { game }) }, ...extra } } },
+      fetchDataObject: jest.fn(),
+      updateDataObject: jest.fn().mockResolvedValue({}),
+    };
+    mockGetVisitor.mockResolvedValue({ visitor, visitorInventory: {} });
+    mockVisitorForSave = visitor;
+    return visitor;
+  };
+  const submit = (app: express.Express, path: number[]) =>
+    request(app).post("/api/wordhunt/submit-word").query({ ...baseCreds, mode: "golden" }).send({ gameId: "game-1", path });
+
+  test("an unknown mode is refused", async () => {
+    mockVisitorWithGame(null);
+    const res = await request(makeApp()).post("/api/wordhunt/start").query({ ...baseCreds, mode: "turbo" });
+    expect(res.status).toBe(400);
+  });
+
+  test("starting a golden game uses the golden board and saves it separately from classic", async () => {
+    const visitor = mockGoldenVisitor(null);
+    const res = await request(makeApp()).post("/api/wordhunt/start").query({ ...baseCreds, mode: "golden" });
+    await flush();
+
+    const { game, board, mode, modes } = res.body.data;
+    expect(mode).toBe("golden");
+    expect(game).toMatchObject({ mode: "golden", goldenStreak: 0 });
+    expect(board.tiles).toEqual(getDailyBoard(undefined, "golden").tiles);
+    expect(board.goldenLetter).toMatch(/^[a-z]$/);
+    expect(modes).toEqual({ classic: "not_started", golden: "in_progress" });
+
+    const [update, options] = visitor.updateDataObject.mock.calls[0];
+    expect(Object.keys(update)).toEqual([`${DATA_KEY}.wordhunt.golden.game`]);
+    // Counted in the shared "starts" (both modes) and in "goldenStarts".
+    expect(options.analytics.map((event: any) => event.analyticName)).toEqual(["starts", "goldenStarts"]);
+    expect(incrementedGolden()).toEqual({ [`wordHuntGoldenAnalytics.${getBoardDate()}.gamesStarted`]: 1 });
+  });
+
+  const incrementedGolden = () =>
+    Object.fromEntries(mockAnalyticsAsset.incrementDataObjectValue.mock.calls.map(([path, amount]: any[]) => [path, amount]));
+
+  test("golden words score double with a streak bonus; a non-golden word resets the streak", async () => {
+    const visitor = mockGoldenVisitor(goldenGame());
+    const app = makeApp();
+
+    const first = await submit(app, [0, 1, 2]); // cat: 200 x 2
+    const second = await submit(app, [0, 1, 2, 3]); // cats: 400 x 2.5 (second golden word in a row)
+    const plain = await submit(app, [0, 1, 5]); // cab: no T, 200, streak resets
+
+    expect(first.body.data).toMatchObject({ result: "valid", word: "cat", points: 400, multiplier: 2, goldenStreak: 1 });
+    expect(second.body.data).toMatchObject({ points: 1000, multiplier: 2.5, goldenStreak: 2 });
+    expect(plain.body.data).toMatchObject({ points: 200, multiplier: 1, goldenStreak: 0 });
+    expect(plain.body.data.game.score).toBe(1600);
+
+    // Each save writes just the word and the streak, under the golden game.
+    expect(visitor.updateDataObject).toHaveBeenCalledWith(
+      {
+        [`${DATA_KEY}.wordhunt.golden.game.found.cats`]: 1000,
+        [`${DATA_KEY}.wordhunt.golden.game.goldenStreak`]: 2,
+        [`${DATA_KEY}.wordhunt.golden.game.goldenBestStreak`]: 2,
+      },
+      {},
+    );
+  });
+
+  test("finishing a golden game only updates the golden bests, and uses the golden leaderboard", async () => {
+    const foundWords = [{ word: "cats", points: 1000 }, { word: "cat", points: 400 }, { word: "cab", points: 200 }];
+    const classicStats = { gamesPlayed: 3, totalScore: 900, bestScore: 500, streak: { current: 1, best: 2, lastDate: "2026-01-01" } };
+    const visitor = mockGoldenVisitor(goldenGame({ board: { ...goldenBoard, date: getBoardDate() }, foundWords, goldenBestStreak: 2 }), {
+      stats: classicStats,
+    });
+    const asset = { dataObject: {}, updateDataObject: jest.fn().mockResolvedValue({}) };
+    mockGetDroppedAsset.mockResolvedValue(asset);
+
+    const res = await request(makeApp())
+      .post("/api/wordhunt/end")
+      .query({ ...baseCreds, mode: "golden", profileId: "p1", displayName: "Ann" })
+      .send({ gameId: "game-1" });
+    await flush();
+
+    expect(res.body.data.newBadges).toEqual([]);
+    expect(res.body.data.modes.golden).toBe("finished");
+    const [update, options] = visitor.updateDataObject.mock.calls[0];
+    // Classic stats are untouched; only the golden bests are added.
+    expect(update[`${DATA_KEY}.wordhunt.stats`]).toEqual({
+      ...classicStats,
+      foundTopia: false,
+      foundLongWord: false,
+      goldenBestStreak: 2,
+      goldenMostWords: 2,
+    });
+    const events = options.analytics.map((event: any) => event.analyticName);
+    // Shared events (counted with classic) plus golden copies and golden-only events.
+    expect(events).toEqual(
+      expect.arrayContaining(["completions", "goldenCompletions", "goldenLetterWordsFound", "goldenBronzeGoals"]),
+    );
+
+    expect(asset.updateDataObject).toHaveBeenCalledWith(
+      { goldenDailyLeaderboard: { date: getBoardDate(), scores: { p1: "Ann|1600" } } },
+      {},
+    );
+    const counters = incrementedGolden();
+    const day = `wordHuntGoldenAnalytics.${getBoardDate()}`;
+    expect(counters).toMatchObject({ [`${day}.gamesCompleted`]: 1, [`${day}.goldenLetterWordsFound`]: 2, [`${day}.goalsBronze`]: 1 });
+  });
+
+  test("GET /game-state reports both modes, so the start screen can show each one", async () => {
+    const finishedClassic = makeGame({ board: { ...testBoard, date: getBoardDate() }, endedAt: Date.now(), endReason: "quit" });
+    mockGoldenVisitor(goldenGame({ board: { ...goldenBoard, date: getBoardDate() } }), { game: finishedClassic });
+    const res = await request(makeApp()).get("/api/wordhunt/game-state").query({ ...baseCreds, mode: "golden" });
+
+    expect(res.body.data.modes).toEqual({ classic: "finished", golden: "in_progress" });
+    expect(res.body.data.game.mode).toBe("golden");
+  });
+
+  test("each mode has its own leaderboard", async () => {
+    mockVisitorWithGame(null);
+    mockGetDroppedAsset.mockResolvedValue({
+      dataObject: {
+        dailyLeaderboard: { date: getBoardDate(), scores: { p1: "Ann|500" } },
+        goldenDailyLeaderboard: { date: getBoardDate(), scores: { p2: "Bob|900" } },
+      },
+    });
+    const app = makeApp();
+    const classic = await request(app).get("/api/wordhunt/leaderboard").query(baseCreds);
+    const golden = await request(app).get("/api/wordhunt/leaderboard").query({ ...baseCreds, mode: "golden" });
+
+    expect(classic.body.data.entries.map((entry: any) => entry.name)).toEqual(["Ann"]);
+    expect(golden.body.data.entries.map((entry: any) => entry.name)).toEqual(["Bob"]);
+  });
+
+  test("finishing a golden game can earn the golden badges", async () => {
+    const tenGolden = ["cat", "cats", "act", "acts", "tab", "bat", "tabs", "bats", "scat", "tact"].map((word) => ({ word, points: 400 }));
+    mockGoldenVisitor(goldenGame({ board: { ...goldenBoard, date: getBoardDate() }, foundWords: tenGolden, goldenBestStreak: 6 }));
+    mockGetDroppedAsset.mockResolvedValue({ dataObject: {}, updateDataObject: jest.fn().mockResolvedValue({}) });
+
+    const res = await request(makeApp()).post("/api/wordhunt/end").query({ ...baseCreds, mode: "golden" }).send({ gameId: "game-1" });
+    expect(res.body.data.newBadges).toEqual(["Gold Rush!", "Midas Touch"]);
+  });
+
+  test("admin stats add both modes together by default, or show one mode", async () => {
+    mockVisitorWithGame(null, { isAdmin: true });
+    const today = getBoardDate();
+    mockGetDroppedAsset.mockResolvedValue({
+      dataObject: {
+        wordHuntAnalytics: { [today]: { gamesStarted: 4, gamesCompleted: 4, wordsFound: 40 } },
+        wordHuntGoldenAnalytics: { [today]: { gamesStarted: 2, gamesCompleted: 1, wordsFound: 20, goldenLetterWordsFound: 6 } },
+      },
+    });
+    const app = makeApp();
+    const get = (mode?: string) =>
+      request(app).get("/api/wordhunt/admin/analytics").query({ ...baseCreds, days: 1, ...(mode && { mode }) });
+
+    expect((await get()).body.data.totals).toMatchObject({ gamesStarted: 6, gamesCompleted: 5, averageWordsFound: 12 });
+    expect((await get("all")).body.data.totals.gamesStarted).toBe(6);
+    expect((await get("classic")).body.data.totals).toMatchObject({ gamesStarted: 4, averageWordsFound: 10 });
+    expect((await get("golden")).body.data.totals).toMatchObject({ gamesStarted: 2, averageGoldenLetterWords: 6 });
+    expect((await get("turbo")).status).toBe(400);
+  });
+});
+

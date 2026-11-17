@@ -12,15 +12,18 @@ import {
   saveGame,
 } from "../utils/gameState.js";
 import { getGameStartedAnalytics, recordGameStarted } from "../utils/analytics.js";
+import { parseMode, UNKNOWN_MODE_ERROR } from "../utils/mode.js";
 import { tryRecordDailyScore } from "../utils/leaderboard.js";
 import { getRevealedWordOfTheDay } from "../utils/wordOfTheDay.js";
 
 export const handleStartWordHunt = async (req: Request, res: Response) => {
   try {
     const credentials = getCredentials(req.query);
-    const board = getDailyBoard();
+    const mode = parseMode(req.query.mode);
+    if (!mode) return res.status(400).json(UNKNOWN_MODE_ERROR);
+    const board = getDailyBoard(undefined, mode);
 
-    const { visitor, game: existingGame, stats, replayDate } = await getWordHuntVisitor(credentials);
+    const { visitor, game: existingGame, stats, replayDate, modes } = await getWordHuntVisitor(credentials, { mode });
 
     // Each player gets one game per daily board. If today's game has already finished, return it instead of
     // starting a new one so the player sees their results.
@@ -34,6 +37,8 @@ export const handleStartWordHunt = async (req: Request, res: Response) => {
         game: existingGame,
         serverTime: Date.now(),
         wordOfTheDay: getRevealedWordOfTheDay(existingGame),
+        mode,
+        modes: { ...modes, [mode]: "finished" },
       };
       return res.json({ success: true, data });
     }
@@ -49,7 +54,7 @@ export const handleStartWordHunt = async (req: Request, res: Response) => {
         await finishGame({ credentials, visitor, game: existingGame, stats });
       }
       // After an admin resets their play, their later games on this board are replays (left out of analytics).
-      game = createGame(board, Date.now(), replayDate === board.date);
+      game = createGame(board, Date.now(), replayDate === board.date, mode);
       await saveGame({ credentials, visitor, game, analytics: getGameStartedAnalytics(credentials, game) });
       // Recorded in the background; never fails or slows down the request.
       void recordGameStarted(credentials, game);
@@ -60,6 +65,8 @@ export const handleStartWordHunt = async (req: Request, res: Response) => {
       game,
       serverTime: Date.now(),
       validWords: getValidWordsForGame(game, board.date),
+      mode,
+      modes: { ...modes, [mode]: "in_progress" },
     };
     return res.json({ success: true, data });
   } catch (error) {
