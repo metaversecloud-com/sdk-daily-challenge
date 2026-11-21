@@ -47,6 +47,7 @@ export const awardBadges = async ({
         console.error(`Failed to grant "${name}"`, err);
       }
     }
+    await trackAnalytics(visitor, credentials.urlSlug, badgeEvents(granted, credentials.profileId));
   } catch (err) {
     console.error("awardBadges failed", err);
   }

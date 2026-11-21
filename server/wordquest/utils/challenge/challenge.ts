@@ -13,15 +13,22 @@ export const TIMED_LIMIT_MS = 3 * 60 * 1000;
 export const parseChallengeMode = (value: unknown): ChallengeMode | null =>
   value === "timed" || value === "oneshot" ? value : null;
 
-// Distinct words, deterministic per visitor and day
-export const pickChallengeWords = (date: string, profileId: string, pool: string[]): string[] => {
-  const words: string[] = [];
+// Distinct words, deterministic per visitor and day. Each mode gets its own slice,
+// so Timed and One Shot never share a word.
+export const pickChallengeWords = (
+  date: string,
+  profileId: string,
+  pool: string[],
+  mode: ChallengeMode,
+): string[] => {
+  const all: string[] = [];
   let salt = 0;
-  while (words.length < CHALLENGE_WORD_COUNT && salt < 100) {
+  while (all.length < CHALLENGE_WORD_COUNT * 2 && salt < 200) {
     const word = pickDailyWord(`${date}:${profileId}:challenge:${salt++}`, pool);
-    if (!words.includes(word)) words.push(word);
+    if (!all.includes(word)) all.push(word);
   }
-  return words;
+  const start = mode === "timed" ? 0 : CHALLENGE_WORD_COUNT;
+  return all.slice(start, start + CHALLENGE_WORD_COUNT);
 };
 
 export const createChallengeRun = (

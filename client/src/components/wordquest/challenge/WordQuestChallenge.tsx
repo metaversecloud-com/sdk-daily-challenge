@@ -30,6 +30,7 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const announced = useRef<Set<number>>(new Set());
   const prevStatus = useRef<string | null>(null);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const busy = useRef(false);
 
   const applyState = useCallback((next: ChallengeGameState) => {
@@ -100,6 +101,28 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
     return () => clearTimeout(timer);
   }, [error, state]);
 
+  // Leaving mid-run forfeits it, so ask first. Before Start or after the end, just go back.
+const handleBack = () => {
+  if (state?.status === "playing") setConfirmLeave(true);
+  else onBack();
+};
+
+const handleForfeit = async () => {
+  if (busy.current) return;
+  busy.current = true;
+  setIsBusy(true);
+  try {
+    await backendAPI.post("/wordquest/challenge/forfeit", { mode });
+    onBack();
+  } catch (err) {
+    setConfirmLeave(false);
+    setError((err as any)?.response?.data?.error || "Could not leave.");
+  } finally {
+    busy.current = false;
+    setIsBusy(false);
+  }
+};
+
   // Countdown for timed mode. When it reaches zero, ask the server, which decides.
   useEffect(() => {
     if (!state || state.status !== "playing" || state.endsAt === null) {
@@ -130,7 +153,7 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
 
   // Type on the physical keyboard (paused while the popup is open)
   useEffect(() => {
-    if (!state || state.status !== "playing" || showLeaderboard) return;
+    if (!state || state.status !== "playing" || showLeaderboard || confirmLeave) return;
 
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
@@ -150,7 +173,7 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [state, currentGuess, error, isBusy, showLeaderboard]);
+  }, [state, currentGuess, error, isBusy, showLeaderboard, confirmLeave]);
 
   if (isLoading) return <p className="p3">Loading...</p>;
 
@@ -175,7 +198,7 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
   return (
     <div className="flex flex-col items-center gap-4 w-full">
       <div className="wordquest-challenge-header">
-        <WordQuestBackButton onClick={onBack} />
+        <WordQuestBackButton onClick={handleBack} />
         <h2 className="h4">{title}</h2>
       </div>
 
@@ -282,6 +305,26 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
         </svg>
         {isOver ? "Results" : "Leaderboard"}
       </button>
+
+      {confirmLeave && (
+      <div className="wordquest-confirm-overlay" role="alertdialog" aria-modal="true" aria-labelledby="wq-leave-title">
+        <div className="wordquest-confirm-card">
+          <h3 id="wq-leave-title" className="h4">Leave this run?</h3>
+          <p className="p3">
+            Your run will end now and you can't start it again today.
+            {mode === "timed" ? " Your time is still counting down while you decide." : ""}
+          </p>
+          <div className="wordquest-confirm-actions">
+            <button type="button" className="btn wordquest-guess-btn" onClick={() => setConfirmLeave(false)} disabled={isBusy}>
+              Keep playing
+            </button>
+            <button type="button" className="btn btn-outline" onClick={handleForfeit} disabled={isBusy}>
+              Leave and end run
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
       {showLeaderboard && (
         <WordQuestChallengeLeaderboardModal

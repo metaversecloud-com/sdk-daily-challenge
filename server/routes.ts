@@ -2,7 +2,7 @@ import express from "express";
 import { handleGetGameState, handleSubmitGuess, handleResetGame, 
       handleClearAnswerList, handleSetAnswerList, handleGetAnswerList,
       handleGetLeaderboard, handleStartChallenge, handleSubmitChallengeGuess,
-      handleGetChallengeLeaderboard
+      handleGetChallengeLeaderboard, handleForfeitChallenge
     } from "./controllers/index.js";
 import { getVersion } from "@utils/getVersion.js";
 
@@ -39,5 +39,6 @@ router.get("/wordquest/leaderboard", handleGetLeaderboard);
 router.post("/wordquest/challenge/start", handleStartChallenge);
 router.post("/wordquest/challenge/guess", handleSubmitChallengeGuess);
 router.get("/wordquest/challenge/leaderboard", handleGetChallengeLeaderboard);
+router.post("/wordquest/challenge/forfeit", handleForfeitChallenge);
 
 export default router;
