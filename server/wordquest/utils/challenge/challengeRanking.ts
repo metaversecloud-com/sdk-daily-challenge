@@ -8,7 +8,7 @@ export interface LeaderboardEntry {
   runs: number;
 }
 
-export const boardKey = (mode: ChallengeMode) => `${mode}Leaderboard`; // timedLeaderboard, suddenDeathLeaderboard
+export const boardKey = (mode: ChallengeMode) => `${mode}Leaderboard`; // timedLeaderboard, oneshotLeaderboard
 
 export const serializeEntry = (e: LeaderboardEntry) =>
   [e.displayName.replace(/\|/g, " "), e.wordsSolved, e.totalGuesses, e.timeLeftMs ?? "", e.runs].join("|");

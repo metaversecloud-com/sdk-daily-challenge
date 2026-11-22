@@ -10,7 +10,7 @@ type KeyParts = Pick<Credentials, "urlSlug" | "sceneDropId">;
 export const getWordQuestKey = ({ urlSlug, sceneDropId }: KeyParts) => `${urlSlug}-${sceneDropId}`;
 // Dot-path for updateDataObject. Only ever write here, never to the shared key itself.
 export const getWordQuestPath = (credentials: KeyParts) => `${getWordQuestKey(credentials)}.wordquest`;
-export const CHALLENGE_MODES = ["timed", "suddenDeath"] as const;
+export const CHALLENGE_MODES = ["timed", "oneshot"] as const;
 export const getChallengeKey = (credentials: KeyParts, mode: (typeof CHALLENGE_MODES)[number]) =>
   `${getWordQuestKey(credentials)}-challenge-${mode}`;
 

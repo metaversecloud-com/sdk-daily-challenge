@@ -73,7 +73,7 @@ This folder contains guidelines and examples for AI assistants working with Topi
 | File | SDK Feature |
 |------|-------------|
 | `examples/handleGetConfiguration.md` | Retrieve world/visitor configuration |
-| `examples/handleResetGameState.md` | Reset game state (admin only) |
+| `examples/handleRes.md` | Reset game state (admin only) |
 | `examples/leaderboard.md` | Store, parse, sort, and display visitor leaderboards |
 
 ### Analytics & Effects

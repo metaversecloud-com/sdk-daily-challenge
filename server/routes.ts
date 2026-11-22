@@ -10,6 +10,7 @@ import {
   handleStartChallenge,
   handleSubmitChallengeGuess,
   handleGetChallengeLeaderboard,
+  handleForfeitChallenge,
 } from "./controllers/index.js";
 import { getVersion } from "@utils/getVersion.js";
 import wordHuntRouter from "./wordhunt/routes.js";
@@ -51,5 +52,6 @@ router.get("/wordquest/leaderboard", handleGetLeaderboard);
 router.post("/wordquest/challenge/start", handleStartChallenge);
 router.post("/wordquest/challenge/guess", handleSubmitChallengeGuess);
 router.get("/wordquest/challenge/leaderboard", handleGetChallengeLeaderboard);
+router.post("/wordquest/challenge/forfeit", handleForfeitChallenge);
 
 export default router;

@@ -2,9 +2,9 @@ import express from "express";
 import request from "supertest";
 
 import router from "../../routes.js";
-import { evaluateGuess } from "../../utils/wordquest/evaluateGuess.js";
-import { pickDailyWord, getTodayDateString } from "../../utils/wordquest/pickDailyWord.js";
-import { WORD_BANK_SET } from "../../utils/wordquest/words.js";
+import { evaluateGuess } from "../../wordquest/utils/evaluateGuess.js";
+import { pickDailyWord, getTodayDateString } from "../../wordquest/utils/pickDailyWord.js";
+import { WORD_BANK_SET } from "../../wordquest/utils/words.js";
 
 jest.mock("@utils/index.js", () => ({
   errorHandler: jest.fn(({ error, res }: any) => res?.status(500).json({ success: false, error: String(error) })),

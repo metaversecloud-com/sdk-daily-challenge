@@ -23,6 +23,8 @@ export interface WordQuestGameState {
   targetWord?: string; // only present once status !== "playing"
   stats: WordQuestStatsData;
   isAdmin?: boolean;
+  badges?: Record<string, BadgeType>;
+  visitorInventory?: { badges: Record<string, { id: string; name: string; icon: string }> };
 }
 
 // Server-only: what's saved on the visitor's data object
@@ -32,7 +34,7 @@ export interface WordQuestVisitorData {
   guesses: GuessResult[];
   status: "playing" | "won" | "lost";
   stats: WordQuestStatsData;
-  challenge?: Partial<Record<ChallengeMode, ChallengeRun>>; // today's timed / sudden death runs
+  challenge?: Partial<Record<ChallengeMode, ChallengeRun>>; // today's timed / one shot runs
 }
 
 
@@ -45,7 +47,7 @@ export interface LeaderboardRow {
 }
 
 // challenge
-export type ChallengeMode = "timed" | "suddenDeath";
+export type ChallengeMode = "timed" | "oneshot";
 export type ChallengeStatus = "playing" | "complete" | "failed" | "timeout";
 
 export interface ChallengeRun {
@@ -83,4 +85,11 @@ export interface ChallengeLeaderboardRow {
   totalGuesses: number;
   timeLeftMs: number | null; // timed mode only
   runs: number;
+}
+
+export interface BadgeType {
+  id: string;
+  name: string;
+  icon: string;
+  description?: string;
 }

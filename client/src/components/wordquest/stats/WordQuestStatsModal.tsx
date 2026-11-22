@@ -27,7 +27,9 @@ export const WordQuestStatsModal = ({ stats, status, targetWord, onClose }: Prop
       }
       // Keep Tab inside the dialog
       if (e.key === "Tab" && panelRef.current) {
-        const focusable = panelRef.current.querySelectorAll<HTMLElement>("button, [href], input, [tabindex]:not([tabindex='-1'])");
+        const focusable = panelRef.current.querySelectorAll<HTMLElement>(
+          "button, [href], input, [tabindex]:not([tabindex='-1'])",
+        );
         if (focusable.length === 0) return;
         const first = focusable[0];
         const last = focusable[focusable.length - 1];
