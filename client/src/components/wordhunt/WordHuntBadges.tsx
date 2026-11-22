@@ -14,6 +14,8 @@ const CATEGORIES: { id: WordHuntBadgeCategory; label: string }[] = [
   { id: "play", label: "Play" },
   { id: "score", label: "Score" },
   { id: "special", label: "Special" },
+  // Earned in Golden Letter mode.
+  { id: "golden", label: "Golden Letter" },
 ];
 
 const getBadgeStatus = (badge: WordHuntBadge) => {
@@ -106,7 +108,7 @@ export const WordHuntBadges = ({ refreshKey }: WordHuntBadgesProps) => {
                     onBlur={() => setDismissedTipSlug(null)}
                     onKeyDown={(event) => event.key === "Escape" && setDismissedTipSlug(badge.slug)}
                   >
-                    <img src={`/badges/${badge.slug}.png`} alt="" width={88} height={88} />
+                    <img src={badge.image} alt="" width={88} height={88} />
                     <span className="wh-badge-name">{badge.name}</span>
                   </button>
                   <span id={`wh-badge-tip-${badge.slug}`} role="tooltip" className="wh-badge-tip p3">

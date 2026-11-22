@@ -16,7 +16,8 @@ let inventoryCache: CachedInventory | null = null;
 
 /**
  * Get ecosystem inventory items (badges, etc.) with caching.
- * Pass forceRefresh: true to bypass the cache (used when a new inventory ZIP is uploaded).
+ * Pass forceRefresh: true to bypass the cache (used when a new inventory ZIP is uploaded,
+ * and by WordQuest when the URL has ?forceRefreshInventory=true).
  */
 export const getCachedInventoryItems = async ({
   credentials,

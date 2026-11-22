@@ -3,6 +3,8 @@ import { MouseEvent, PointerEvent, useEffect, useRef, useState } from "react";
 interface WordHuntGridProps {
   tiles: string[];
   size: number;
+  /** Golden mode: tiles with this letter are highlighted. */
+  goldenLetter?: string;
   disabled: boolean;
   onPathChange: (path: number[]) => void;
   onSubmitPath: (path: number[]) => void;
@@ -19,7 +21,16 @@ const areTilesAdjacent = (a: number, b: number, size: number) => {
   return a !== b && rowDiff <= 1 && colDiff <= 1;
 };
 
-export const WordHuntGrid = ({ tiles, size, disabled, onPathChange, onSubmitPath, onHint }: WordHuntGridProps) => {
+export const WordHuntGrid = ({
+  tiles,
+  size,
+  goldenLetter,
+  disabled,
+  onPathChange,
+  onSubmitPath,
+  onHint,
+}: WordHuntGridProps) => {
+  const isGolden = (tile: string) => !!goldenLetter && tile.toLowerCase() === goldenLetter;
   const gridRef = useRef<HTMLDivElement>(null);
   const tileRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const pathRef = useRef<number[]>([]);
@@ -175,14 +186,16 @@ export const WordHuntGrid = ({ tiles, size, disabled, onPathChange, onSubmitPath
               key={index}
               ref={(element) => (tileRefs.current[index] = element)}
               type="button"
-              className={`wh-tile ${isSelected ? "wh-tile--selected" : ""}`}
-              aria-label={`${tile}, row ${Math.floor(index / size) + 1}, column ${(index % size) + 1}`}
+              className={`wh-tile ${isSelected ? "wh-tile--selected" : ""} ${isGolden(tile) ? "wh-tile--golden" : ""}`}
+              aria-label={`${tile}${isGolden(tile) ? ", golden letter" : ""}, row ${Math.floor(index / size) + 1}, column ${(index % size) + 1}`}
               aria-pressed={isSelected}
               disabled={disabled}
               onClick={(event) => handleTileClick(event, index)}
             >
               <span className="wh-tile-face" aria-hidden="true">
                 {tile}
+                {/* A star as well as the gold color, so golden tiles don't rely on color alone. */}
+                {isGolden(tile) && <span className="wh-tile-star">★</span>}
               </span>
             </button>
           );

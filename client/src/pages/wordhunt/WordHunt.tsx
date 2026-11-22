@@ -1,10 +1,12 @@
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
 
 // components
-import { Loading } from "@/components";
+import { AdminIconButton, Confetti, Loading } from "@/components";
 import {
+  WordHuntAdminModal,
   WordHuntBadges,
   WordHuntExitModal,
+  WordHuntGoldenStatus,
   WordHuntGrid,
   WordHuntResults,
   WordHuntStart,
@@ -21,9 +23,13 @@ import {
   WordHuntBoard,
   WordHuntGame,
   WordHuntGameStateResponse,
+  WordHuntMode,
+  WordHuntModeStatus,
   WordHuntSubmitResult,
   WordHuntSubmitWordResponse,
+  WordHuntWordOfTheDay,
 } from "@shared/types/wordhunt/WordHuntTypes";
+import { scoreGoldenWord } from "@shared/wordhunt/golden";
 
 // utils
 import { backendAPI, setErrorMessage } from "@/utils";
@@ -45,6 +51,23 @@ const FEEDBACK_MESSAGES: Record<Exclude<WordHuntSubmitResult, "valid">, string> 
 const isFinishedToday = ({ board, game }: WordHuntGameStateResponse) =>
   !!game && !!game.endedAt && game.board.date === board.date;
 
+// Remembers the last mode picked on this device (a convenience only; storage can be unavailable).
+const MODE_STORAGE_KEY = "wordhunt-mode";
+const loadSavedMode = (): WordHuntMode => {
+  try {
+    return window.localStorage.getItem(MODE_STORAGE_KEY) === "golden" ? "golden" : "classic";
+  } catch {
+    return "classic";
+  }
+};
+const saveMode = (mode: WordHuntMode) => {
+  try {
+    window.localStorage.setItem(MODE_STORAGE_KEY, mode);
+  } catch {
+    // Ignore: the mode just won't be remembered.
+  }
+};
+
 const formatTime = (ms: number) => {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}`;
@@ -55,8 +78,11 @@ export const WordHunt = () => {
   const { error, hasInteractiveParams } = useContext(GlobalStateContext);
 
   const [phase, setPhase] = useState<Phase>("loading");
+  const [mode, setMode] = useState<WordHuntMode>(loadSavedMode);
+  const [modes, setModes] = useState<Record<WordHuntMode, WordHuntModeStatus> | null>(null);
   const [board, setBoard] = useState<WordHuntBoard | null>(null);
   const [game, setGame] = useState<WordHuntGame | null>(null);
+  const [wordOfTheDay, setWordOfTheDay] = useState<WordHuntWordOfTheDay | null>(null);
   const [currentWord, setCurrentWord] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [remainingMs, setRemainingMs] = useState(0);
@@ -65,46 +91,139 @@ export const WordHunt = () => {
   const [showExitModal, setShowExitModal] = useState(false);
   const [tab, setTab] = useState<WordHuntTab>("play");
   const [newBadges, setNewBadges] = useState<string[]>([]);
+  // Confetti plays when a game finishes on this screen, not every time a player reopens today's results.
+  const [justFinished, setJustFinished] = useState(false);
+  // World admins get testing tools (clear the leaderboard, replay today's board). The server re-checks every action.
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [leaderboardVersion, setLeaderboardVersion] = useState(0);
+  const [adminNotice, setAdminNotice] = useState("");
+  const adminBarRef = useRef<HTMLDivElement>(null);
 
   // Difference between the server clock and this device's clock, so the timer matches the server.
   const clockOffsetRef = useRef(0);
-  // Word submissions are sent one at a time so each response reflects every earlier word.
-  const submitQueueRef = useRef<Promise<void>>(Promise.resolve());
+  // Words still being saved. Words are sent in parallel; ending the game waits for these first.
+  const pendingSubmitsRef = useRef(new Set<Promise<void>>());
+  // Today's words and points, so results can be shown before the server answers (the server still checks every word).
+  const validWordsRef = useRef<Record<string, number> | null>(null);
   const gameRef = useRef<WordHuntGame | null>(null);
   const isEndingRef = useRef(false);
   const announcedRef = useRef(new Set<number>());
 
-  const applyGameState = (data: WordHuntGameStateResponse | WordHuntSubmitWordResponse) => {
+  const applyGameState = (data: WordHuntGameStateResponse) => {
     clockOffsetRef.current = data.serverTime - Date.now();
     gameRef.current = data.game;
     setGame(data.game);
-    if ("board" in data) setBoard(data.board);
+    setBoard(data.board);
+    validWordsRef.current = data.validWords ?? null;
+    // The server only includes the word of the day once the game has ended.
+    if (data.wordOfTheDay) setWordOfTheDay(data.wordOfTheDay);
+    if (data.isAdmin !== undefined) setIsAdmin(data.isAdmin);
+    if (data.modes) setModes(data.modes);
+    if (data.mode) setMode(data.mode);
+  };
+
+  const fetchGameState = async (forMode: WordHuntMode) =>
+    // The shared game-state route (one for every challenge) with Word Hunt's mode.
+    (await backendAPI.get("/game-state", { params: { game: "wordhunt", mode: forMode } })).data.data as WordHuntGameStateResponse;
+
+  /** Admin reset: today's game was deleted, so go back to the start screen as if the player hadn't played. */
+  const handlePlayReset = (data: WordHuntGameStateResponse) => {
+    applyGameState(data);
+    saveMode("classic");
+    setWordOfTheDay(null);
+    setNewBadges([]);
+    setJustFinished(false);
+    setFeedback(null);
+    setTab("play");
+    setPhase("start");
+    setLeaderboardVersion((version) => version + 1);
+    // The popup belongs to the results screen, so close it and confirm on the start screen instead.
+    setShowAdminModal(false);
+    setAdminNotice("Your games for today were reset (both modes). Start a new one whenever you're ready.");
+  };
+
+  // After a reset the old gear button is gone, so put focus on the start screen's gear.
+  useEffect(() => {
+    if (adminNotice) adminBarRef.current?.querySelector("button")?.focus();
+  }, [adminNotice]);
+
+  /**
+   * Adds, removes, or rescores a found word on this device's copy of the game (the score follows the found words).
+   * In golden mode the streak can be updated at the same time.
+   */
+  const updateFoundWords = (
+    change: (foundWords: WordHuntGame["foundWords"]) => WordHuntGame["foundWords"],
+    goldenStreak?: number,
+  ) => {
+    const current = gameRef.current;
+    if (!current) return;
+    const foundWords = change(current.foundWords);
+    const next = {
+      ...current,
+      foundWords,
+      score: foundWords.reduce((total, { points }) => total + points, 0),
+      ...(goldenStreak !== undefined && { goldenStreak }),
+    };
+    gameRef.current = next;
+    setGame(next);
   };
 
   const showFeedback = (type: "success" | "error", text: string) => setFeedback({ type, text, id: Date.now() });
 
   useEffect(() => {
     if (!hasInteractiveParams) return;
-    backendAPI
-      .get("/game-state", { params: { game: "wordhunt" } })
-      .then((response) => {
-        const data = response.data.data as WordHuntGameStateResponse;
+    (async () => {
+      try {
+        let data = await fetchGameState(mode);
+        // A game in progress in the other mode (e.g. the drawer was closed mid-game) is resumed first.
+        const inProgress = data.modes && (Object.keys(data.modes) as WordHuntMode[]).find((m) => data.modes![m] === "in_progress");
+        if (inProgress && inProgress !== data.mode) data = await fetchGameState(inProgress);
         applyGameState(data);
+
         const isInProgress = data.game && !data.game.endedAt && data.game.endsAt > data.serverTime;
-        // One game per daily board: a player who already finished today's game goes straight to their results.
-        setPhase(isInProgress ? "playing" : isFinishedToday(data) ? "results" : "start");
-      })
-      .catch((error) => {
+        // One game per mode per day: once both modes are played, go straight to the results; otherwise show the
+        // start screen so the player can pick the mode they haven't played yet.
+        const allPlayed = data.modes && Object.values(data.modes).every((status) => status === "finished");
+        setPhase(isInProgress ? "playing" : allPlayed && isFinishedToday(data) ? "results" : "start");
+      } catch (error) {
         setErrorMessage(dispatch, error as ErrorType);
         setPhase("start");
-      });
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasInteractiveParams]);
+
+  /** Start screen: switch modes and load that mode's board, game, and leaderboard. */
+  const handleModeChange = async (nextMode: WordHuntMode) => {
+    if (nextMode === mode) return;
+    setMode(nextMode);
+    saveMode(nextMode);
+    setWordOfTheDay(null);
+    try {
+      applyGameState(await fetchGameState(nextMode));
+    } catch (error) {
+      setErrorMessage(dispatch, error as ErrorType);
+    }
+  };
+
+  const viewResults = () => {
+    setJustFinished(false);
+    setTab("play");
+    setPhase("results");
+  };
+
+  const backToModes = () => {
+    setJustFinished(false);
+    setNewBadges([]);
+    setTab("play");
+    setPhase("start");
+  };
 
   const startGame = async () => {
     setIsStarting(true);
     try {
-      const response = await backendAPI.post("/wordhunt/start");
+      const response = await backendAPI.post("/wordhunt/start", undefined, { params: { mode } });
       const data = response.data.data as WordHuntGameStateResponse;
       applyGameState(data);
       setTab("play");
@@ -115,6 +234,7 @@ export const WordHunt = () => {
       }
       isEndingRef.current = false;
       announcedRef.current = new Set();
+      setAdminNotice("");
       setNewBadges([]);
       setFeedback(null);
       setCurrentWord("");
@@ -133,16 +253,21 @@ export const WordHunt = () => {
     setShowExitModal(false);
     setPhase("ending");
 
-    // Let any words still being checked finish before the game is closed out.
-    await submitQueueRef.current;
+    // Let any words still being saved finish before the game is closed out.
+    await Promise.allSettled([...pendingSubmitsRef.current]);
     try {
-      const response = await backendAPI.post("/wordhunt/end", { gameId: gameRef.current.gameId });
+      const response = await backendAPI.post(
+        "/wordhunt/end",
+        { gameId: gameRef.current.gameId },
+        { params: { mode: gameRef.current.mode ?? "classic" } },
+      );
       applyGameState(response.data.data);
       setNewBadges((response.data.data as WordHuntGameStateResponse).newBadges ?? []);
     } catch (error) {
       setErrorMessage(dispatch, error as ErrorType);
     }
     setTab("play");
+    setJustFinished(true);
     setPhase("results");
   }, [dispatch]);
 
@@ -180,44 +305,142 @@ export const WordHunt = () => {
   );
 
   const handleSubmitPath = (path: number[]) => {
-    if (!board || !gameRef.current) return;
-    const word = path.map((index) => board.tiles[index]).join("");
+    if (!board || !gameRef.current || isEndingRef.current) return;
+    const word = path
+      .map((index) => board.tiles[index])
+      .join("")
+      .toLowerCase();
     if (word.length < MIN_WORD_LENGTH) {
       showFeedback("error", FEEDBACK_MESSAGES.too_short);
       return;
     }
+    if (gameRef.current.foundWords.some((found) => found.word === word)) {
+      showFeedback("error", FEEDBACK_MESSAGES.already_found);
+      return;
+    }
 
-    const gameId = gameRef.current.gameId;
-    submitQueueRef.current = submitQueueRef.current.then(async () => {
-      if (isEndingRef.current && gameRef.current?.endedAt) return;
+    // With today's word list, the result is shown right away; otherwise it waits for the server.
+    const validWords = validWordsRef.current;
+    if (validWords && !(word in validWords)) {
+      showFeedback("error", FEEDBACK_MESSAGES.not_a_word);
+      return;
+    }
+    const currentGame = gameRef.current;
+    const gameMode = currentGame.mode ?? "classic";
+    const showSuccess = (points: number, multiplier = 1) =>
+      showFeedback(
+        "success",
+        multiplier > 1
+          ? `★ GOLDEN! ${word.toUpperCase()} ×${multiplier} +${points.toLocaleString()} points!`
+          : `${word.toUpperCase()} +${points.toLocaleString()} points!`,
+      );
+    const isOptimistic = !!validWords;
+    const previousStreak = currentGame.goldenStreak ?? 0;
+    let optimisticPoints = 0;
+    if (isOptimistic) {
+      if (gameMode === "golden") {
+        // Same shared rules the server uses, so this almost always matches its answer.
+        const scored = scoreGoldenWord(word, validWords[word], currentGame.board.goldenLetter, previousStreak);
+        optimisticPoints = scored.points;
+        updateFoundWords((foundWords) => [...foundWords, { word, points: scored.points }], scored.streak);
+        showSuccess(scored.points, scored.multiplier);
+      } else {
+        optimisticPoints = validWords[word];
+        updateFoundWords((foundWords) => [...foundWords, { word, points: optimisticPoints }]);
+        showSuccess(optimisticPoints);
+      }
+    }
+
+    const gameId = currentGame.gameId;
+    const undoWord = () =>
+      updateFoundWords(
+        (foundWords) => foundWords.filter((found) => found.word !== word),
+        gameMode === "golden" ? previousStreak : undefined,
+      );
+    const submit = (async () => {
       try {
-        const response = await backendAPI.post("/wordhunt/submit-word", { gameId, path });
+        const response = await backendAPI.post("/wordhunt/submit-word", { gameId, path }, { params: { mode: gameMode } });
         const data = response.data.data as WordHuntSubmitWordResponse;
+        clockOffsetRef.current = data.serverTime - Date.now();
         if (gameRef.current?.gameId !== gameId) return;
 
-        applyGameState(data);
         if (data.result === "valid") {
-          showFeedback("success", `${data.word.toUpperCase()} +${data.points.toLocaleString()} points!`);
-        } else {
+          if (!isOptimistic) {
+            updateFoundWords((foundWords) => [...foundWords, { word: data.word, points: data.points }], data.goldenStreak);
+            showSuccess(data.points, data.multiplier);
+          } else if (data.points !== optimisticPoints) {
+            // Rare (e.g. words sent so fast the server saw them in a different order): use the server's points.
+            updateFoundWords(
+              (foundWords) => foundWords.map((found) => (found.word === word ? { ...found, points: data.points } : found)),
+              data.goldenStreak,
+            );
+          }
+        } else if (data.result !== "already_found" || !isOptimistic) {
+          // The server disagreed (rare): take the word back and say why.
+          if (isOptimistic) undoWord();
           showFeedback("error", FEEDBACK_MESSAGES[data.result]);
           if (data.result === "game_over") endGame();
         }
       } catch (error) {
+        if (isOptimistic) {
+          undoWord();
+          showFeedback("error", `Couldn't save ${word.toUpperCase()}. Try it again.`);
+        }
         setErrorMessage(dispatch, error as ErrorType);
       }
-    });
+    })();
+    pendingSubmitsRef.current.add(submit);
+    submit.finally(() => pendingSubmitsRef.current.delete(submit));
   };
 
   if (phase === "loading") return <Loading />;
 
   const errorMessage = error && <p className="p3 mt-4 text-center wh-feedback--error">{error}</p>;
 
+  // Only shown between games, so an admin can't reset a game they're in the middle of.
+  const adminTools = isAdmin && (
+    <>
+      <div className="wh-admin-bar" ref={adminBarRef}>
+        <AdminIconButton setShowSettings={() => setShowAdminModal(true)} showSettings={false} />
+      </div>
+      {adminNotice && (
+        <p className="wh-panel p3 mb-4" role="status">
+          {adminNotice}
+        </p>
+      )}
+      {showAdminModal && (
+        <WordHuntAdminModal
+          onClose={() => setShowAdminModal(false)}
+          onLeaderboardCleared={() => setLeaderboardVersion((version) => version + 1)}
+          onPlayReset={handlePlayReset}
+        />
+      )}
+    </>
+  );
+
+  // Golden mode gets its own warm gold look (see wordhunt.css).
+  const appClass = `wh-app ${mode === "golden" ? "wh-app--golden" : ""}`;
+
   if (phase === "start" || !board) {
     return (
-      <main className="wh-app">
+      <main className={appClass}>
+        {adminTools}
         <WordHuntTabs active={tab} onChange={setTab} />
         <div id="wh-tabpanel" role="tabpanel" aria-labelledby={`wh-tab-${tab}`}>
-          {tab === "play" ? <WordHuntStart isStarting={isStarting} onStart={startGame} /> : <WordHuntBadges />}
+          {tab === "play" ? (
+            <WordHuntStart
+              mode={mode}
+              onModeChange={handleModeChange}
+              board={board}
+              modes={modes}
+              isStarting={isStarting}
+              onStart={startGame}
+              onViewResults={viewResults}
+              leaderboardRefreshKey={String(leaderboardVersion)}
+            />
+          ) : (
+            <WordHuntBadges />
+          )}
         </div>
         {errorMessage}
       </main>
@@ -226,7 +449,9 @@ export const WordHunt = () => {
 
   if (phase === "results" && game) {
     return (
-      <main className="wh-app">
+      <main className={`${appClass} relative`}>
+        {justFinished && <Confetti />}
+        {adminTools}
         <WordHuntTabs active={tab} onChange={setTab} playLabel="Results" />
         <div id="wh-tabpanel" role="tabpanel" aria-labelledby={`wh-tab-${tab}`}>
           {tab === "play" ? (
@@ -246,7 +471,12 @@ export const WordHunt = () => {
                   </button>
                 </div>
               )}
-              <WordHuntResults game={game} />
+              <WordHuntResults
+                game={game}
+                wordOfTheDay={wordOfTheDay}
+                leaderboardRefreshKey={String(leaderboardVersion)}
+                onBackToModes={backToModes}
+              />
             </>
           ) : (
             <WordHuntBadges refreshKey={game.gameId} />
@@ -260,8 +490,8 @@ export const WordHunt = () => {
   const isLowTime = remainingMs <= 10_000;
 
   return (
-    <main className="wh-app">
-      <h1 className="sr-only">Word Hunt</h1>
+    <main className={appClass}>
+      <h1 className="sr-only">{game?.mode === "golden" ? "Word Hunt: Golden Letter" : "Word Hunt"}</h1>
       <div className="wh-header">
         <button
           type="button"
@@ -284,9 +514,12 @@ export const WordHunt = () => {
         <span className="wh-score-value">{String(game?.score ?? 0).padStart(4, "0")}</span>
       </div>
 
+      {game?.mode === "golden" && <WordHuntGoldenStatus game={game} />}
+
       <WordHuntGrid
         tiles={game?.board.tiles ?? board.tiles}
         size={game?.board.size ?? board.size}
+        goldenLetter={game?.board.goldenLetter}
         disabled={phase !== "playing"}
         onPathChange={handlePathChange}
         onSubmitPath={handleSubmitPath}

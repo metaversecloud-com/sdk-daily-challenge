@@ -46,7 +46,7 @@ export const WordQuestChallengeLeaderboard = ({ mode, refreshKey, showHeading = 
 
       {!failed && rows && rows.length > 0 && (
         <table className="wordquest-lb-table">
-          <caption className="sr-only">Best {mode === "timed" ? "timed" : "sudden death"} runs</caption>
+          <caption className="sr-only">Best {mode === "timed" ? "timed" : "one shot"} runs</caption>
           <thead>
             <tr>
               <th scope="col">#</th>

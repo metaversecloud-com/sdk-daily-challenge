@@ -10,6 +10,7 @@ jest.mock("@utils/index.js", () => ({
   errorHandler: jest.fn(({ error, res }: any) => res?.status(500).json({ success: false, error: String(error) })),
   getCredentials: jest.fn((query: any) => ({ ...query, visitorId: Number(query.visitorId) })),
   getVisitor: jest.fn(),
+  // Used by the shared /game-state controller
   getDroppedAsset: jest.fn().mockResolvedValue({ position: { x: 0, y: 0 } }),
   World: { create: jest.fn(() => ({ triggerParticle: jest.fn().mockResolvedValue({}) })) },
 }));
@@ -41,6 +42,7 @@ const makeStats = () => ({
 
 const mockVisitor = (worldData: object) => {
   const visitor = {
+    isAdmin: false,
     fetchDataObject: jest.fn().mockResolvedValue({ [DATA_KEY]: worldData }),
     setDataObject: jest.fn().mockResolvedValue({}),
     updateDataObject: jest.fn().mockResolvedValue({}),
@@ -95,12 +97,12 @@ describe("wordquest routes", () => {
     // The answer is never sent while the game is in progress.
     expect(res.body.data).not.toHaveProperty("targetWord");
 
-    // The key is rewritten with Word Hunt's game and stats kept alongside the new `wordquest` entry.
+    // WordQuest rewrites the shared per-world key, so it must carry Word Hunt's game and stats over unchanged.
     expect(visitor.setDataObject).not.toHaveBeenCalled();
     expect(visitor.updateDataObject).toHaveBeenCalledTimes(1);
     const [update] = visitor.updateDataObject.mock.calls[0];
     expect(Object.keys(update)).toEqual([DATA_KEY]);
-    expect(update[DATA_KEY].wordhunt).toEqual(wordhunt);
+    expect(update[DATA_KEY]).toMatchObject({ dateStarted: 1, wordhunt });
     expect(update[DATA_KEY].wordquest).toMatchObject({ date: getTodayDateString(), targetWord: "CRANE", status: "playing" });
   });
 
@@ -115,9 +117,10 @@ describe("wordquest routes", () => {
     expect(visitor.updateDataObject).not.toHaveBeenCalled();
   });
 
-  test("POST /wordquest/guess records a win and reveals the answer", async () => {
+  test("POST /wordquest/guess records a win, reveals the answer, and keeps Word Hunt's data", async () => {
+    const wordhunt = { game: { gameId: "wh-1" } };
     const visitor = mockVisitor({
-      wordhunt: { game: { gameId: "wh-1" } },
+      wordhunt,
       wordquest: { date: getTodayDateString(), targetWord: "CRANE", guesses: [], status: "playing", stats: makeStats() },
     });
 
@@ -129,7 +132,7 @@ describe("wordquest routes", () => {
 
     const [update] = visitor.updateDataObject.mock.calls[0];
     expect(Object.keys(update)).toEqual([DATA_KEY]);
-    expect(update[DATA_KEY].wordhunt).toEqual({ game: { gameId: "wh-1" } });
+    expect(update[DATA_KEY].wordhunt).toEqual(wordhunt);
     expect(update[DATA_KEY].wordquest).toMatchObject({ status: "won" });
   });
 

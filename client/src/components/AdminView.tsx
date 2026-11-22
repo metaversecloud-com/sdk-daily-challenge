@@ -1,7 +1,7 @@
 import { useContext} from "react";
 
 // components
-import { WordQuestAnswerAdmin } from "@/components/wordquest/WordQuestAnswerAdmin";
+import { WordQuestAnswerAdmin } from "./wordquest/WordQuestAnswerAdmin";
 
 // context
 import { GlobalStateContext } from "@/context/GlobalContext";

@@ -7,6 +7,10 @@ import { getAnswerPool } from "../utils/answerPool.js";
 import { getTodayDateString } from "../utils/pickDailyWord.js";
 import { saveChallengeRun } from "../utils/challenge/saveChallengeRun.js";
 import { getChallengeLeaderboard, tryRecordChallengeResult } from "../utils/challenge/challengeLeaderboard.js";
+import type { ChallengeRun } from "@shared/types/WordQuestTypes.js";
+import { evaluateChallengeBadges } from "../utils/badges/evaluateBadges.js";
+import { awardBadges } from "../utils/badges/awardBadges.js";
+import { modeEvents, trackAnalytics } from "../utils/analytics.js";
 import {
   CHALLENGE_WORD_COUNT,
   advanceChallenge,
@@ -17,6 +21,16 @@ import {
   pickChallengeWords,
   toChallengeView,
 } from "../utils/challenge/challenge.js";
+
+const awardRunBadges = async (credentials: ReturnType<typeof getCredentials>, visitor: any, run: ChallengeRun) => {
+  const won = run.solved.length > 0 && run.solved.every(Boolean);
+  await trackAnalytics(
+    visitor,
+    credentials.urlSlug,
+    modeEvents(run.mode, won ? ["completions", "wins"] : ["completions", "losses"], credentials.profileId),
+  );
+  await awardBadges({ credentials, visitor, earned: evaluateChallengeBadges(run) });
+};
 
 export const handleStartChallenge = async (req: Request, res: Response) => {
   try {
@@ -33,12 +47,12 @@ export const handleStartChallenge = async (req: Request, res: Response) => {
       if (finalizeIfExpired(existing)) {
         await saveChallengeRun(visitor, credentials, wordQuestData, mode, existing);
         await tryRecordChallengeResult(credentials, existing);
+        await awardRunBadges(credentials, visitor, existing);
       }
       return res.json({ success: true, data: { ...toChallengeView(mode, existing), isAdmin } });
     }
-
     const pool = await getAnswerPool(credentials);
-    const words = pickChallengeWords(today, credentials.profileId, pool);
+    const words = pickChallengeWords(today, credentials.profileId, pool, mode);
     if (words.length < CHALLENGE_WORD_COUNT) {
       return res
         .status(400)
@@ -47,6 +61,7 @@ export const handleStartChallenge = async (req: Request, res: Response) => {
 
     const run = createChallengeRun(mode, today, words);
     await saveChallengeRun(visitor, credentials, wordQuestData, mode, run);
+    await trackAnalytics(visitor, credentials.urlSlug, modeEvents(mode, ["starts"], credentials.profileId));
 
     return res.json({ success: true, data: { ...toChallengeView(mode, run), isAdmin } });
   } catch (error) {
@@ -54,6 +69,43 @@ export const handleStartChallenge = async (req: Request, res: Response) => {
       error,
       functionName: "handleStartChallenge",
       message: "Error starting WordQuest challenge",
+      req,
+      res,
+    });
+  }
+};
+
+export const handleForfeitChallenge = async (req: Request, res: Response) => {
+  try {
+    const credentials = getCredentials(req.query);
+    const mode = parseChallengeMode(req.body.mode);
+    if (!mode) return res.status(400).json({ success: false, error: "Unknown mode." });
+
+    const { visitor, wordQuestData, isAdmin } = await getWordQuestVisitorData(credentials);
+    const run = getTodaysRun(wordQuestData, mode, getTodayDateString());
+    if (!run) return res.status(400).json({ success: false, error: "Nothing to leave." });
+
+    // Already over (finished, timed out, or forfeited): nothing to record twice
+    if (run.status !== "playing") {
+      return res.json({ success: true, data: { ...toChallengeView(mode, run), isAdmin } });
+    }
+
+    // If the clock already ran out, that outcome wins; otherwise end the run as failed
+    if (!finalizeIfExpired(run)) {
+      run.status = "failed";
+      run.finishedAt = Date.now();
+    }
+
+    await saveChallengeRun(visitor, credentials, wordQuestData, mode, run);
+    await tryRecordChallengeResult(credentials, run);
+    await awardRunBadges(credentials, visitor, run);
+
+    return res.json({ success: true, data: { ...toChallengeView(mode, run), isAdmin } });
+  } catch (error) {
+    return errorHandler({
+      error,
+      functionName: "handleForfeitChallenge",
+      message: "Error leaving WordQuest challenge",
       req,
       res,
     });
@@ -95,6 +147,7 @@ export const handleSubmitChallengeGuess = async (req: Request, res: Response) =>
     if (finalizeIfExpired(run)) {
       await saveChallengeRun(visitor, credentials, wordQuestData, mode, run);
       await tryRecordChallengeResult(credentials, run);
+      await awardRunBadges(credentials, visitor, run);
       return res.json({ success: true, data: { ...toChallengeView(mode, run), isAdmin } });
     }
 
@@ -114,8 +167,11 @@ export const handleSubmitChallengeGuess = async (req: Request, res: Response) =>
 
     await saveChallengeRun(visitor, credentials, wordQuestData, mode, run);
 
-    // Record the result once, when the run has just ended
-    if (run.status !== "playing") await tryRecordChallengeResult(credentials, run);
+    // Record the result and award badges once, when the run has just ended
+    if (run.status !== "playing") {
+      await tryRecordChallengeResult(credentials, run);
+      await awardRunBadges(credentials, visitor, run);
+    }
 
     return res.json({ success: true, data: { ...toChallengeView(mode, run), isAdmin } });
   } catch (error) {
