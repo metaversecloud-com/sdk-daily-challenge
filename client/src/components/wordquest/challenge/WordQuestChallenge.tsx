@@ -28,10 +28,11 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
   const [announcement, setAnnouncement] = useState("");
   const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [confirmLeave, setConfirmLeave] = useState(false);
   const announced = useRef<Set<number>>(new Set());
   const prevStatus = useRef<string | null>(null);
-  const [confirmLeave, setConfirmLeave] = useState(false);
   const busy = useRef(false);
+  const pingRef = useRef<Promise<void> | null>(null);
 
   const applyState = useCallback((next: ChallengeGameState) => {
     setState(next);
@@ -62,7 +63,7 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
     prevStatus.current = status;
   }, [state?.status]);
 
-    const handleStart = async () => {
+  const handleStart = async () => {
     if (busy.current) return;
     busy.current = true;
     setIsBusy(true);
@@ -81,6 +82,7 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
   const handleSubmitGuess = async () => {
     if (!state || busy.current) return;
     busy.current = true;
+    await pingRef.current; // never save a guess while a ping is writing the same run
     setIsBusy(true);
     try {
       const response = await backendAPI.post("/wordquest/challenge/guess", { mode, guess: currentGuess });
@@ -95,6 +97,7 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
     }
   };
 
+  // Error messages fade out on their own
   useEffect(() => {
     if (!error || !state) return;
     const timer = setTimeout(() => setError(null), 2500);
@@ -102,26 +105,53 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
   }, [error, state]);
 
   // Leaving mid-run forfeits it, so ask first. Before Start or after the end, just go back.
-const handleBack = () => {
-  if (state?.status === "playing") setConfirmLeave(true);
-  else onBack();
-};
+  const handleBack = () => {
+    if (state?.status === "playing") setConfirmLeave(true);
+    else onBack();
+  };
 
-const handleForfeit = async () => {
-  if (busy.current) return;
-  busy.current = true;
-  setIsBusy(true);
-  try {
-    await backendAPI.post("/wordquest/challenge/forfeit", { mode });
-    onBack();
-  } catch (err) {
-    setConfirmLeave(false);
-    setError((err as any)?.response?.data?.error || "Could not leave.");
-  } finally {
-    busy.current = false;
-    setIsBusy(false);
-  }
-};
+  const handleForfeit = async () => {
+    if (busy.current) return;
+    busy.current = true;
+    setIsBusy(true);
+    try {
+      await backendAPI.post("/wordquest/challenge/forfeit", { mode });
+      onBack();
+    } catch (err) {
+      setConfirmLeave(false);
+      setError((err as any)?.response?.data?.error || "Could not leave.");
+    } finally {
+      busy.current = false;
+      setIsBusy(false);
+    }
+  };
+
+  // Tell the server we're still here; if we stop, it ends the run
+  useEffect(() => {
+    if (state?.status !== "playing") return;
+
+    const ping = () => {
+      if (busy.current || pingRef.current) return;
+      pingRef.current = (async () => {
+        try {
+          const r = await backendAPI.post("/wordquest/challenge/ping", { mode });
+          if (r.data.data && r.data.data.status !== "playing") applyState(r.data.data);
+        } catch {
+          /* a missed ping is fine; the next one catches up */
+        } finally {
+          pingRef.current = null;
+        }
+      })();
+    };
+
+    const id = setInterval(ping, 20000);
+    const onVisible = () => document.visibilityState === "visible" && ping();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [state?.status, mode, applyState]);
 
   // Countdown for timed mode. When it reaches zero, ask the server, which decides.
   useEffect(() => {
@@ -151,7 +181,7 @@ const handleForfeit = async () => {
     return () => clearInterval(id);
   }, [state, clockOffset, load]);
 
-  // Type on the physical keyboard (paused while the popup is open)
+  // Type on the physical keyboard (paused while a popup is open)
   useEffect(() => {
     if (!state || state.status !== "playing" || showLeaderboard || confirmLeave) return;
 
@@ -198,11 +228,10 @@ const handleForfeit = async () => {
   return (
     <div className="flex flex-col items-center gap-4 w-full">
       <div className="wordquest-challenge-header">
-        <WordQuestBackButton onClick={handleBack} />
         <h2 className="h4">{title}</h2>
       </div>
-
-        {state?.status === "notStarted" && (
+      <p className="p3">status: {state?.status ?? "none"}</p>
+      {state?.status === "notStarted" && (
         <div className="wordquest-intro-card">
           <p className="p2 wordquest-intro-lead">
             {mode === "timed"
@@ -210,7 +239,8 @@ const handleForfeit = async () => {
               : `Solve ${state.wordCount} words in a row. Miss one and the run is over. Fewer guesses is a better score.`}
           </p>
           <p className="p3 wordquest-intro-note">You get one attempt per day.</p>
-           {error && <p className="p3 wordquest-error-chip">{error}</p>}
+          <p className="p3 wordquest-intro-note">Leaving or closing the app ends your run.</p>
+          {error && <p className="p3 wordquest-error-chip">{error}</p>}
           <button type="button" className="btn wordquest-guess-btn" onClick={handleStart} disabled={isBusy}>
             Start
           </button>
@@ -306,25 +336,36 @@ const handleForfeit = async () => {
         {isOver ? "Results" : "Leaderboard"}
       </button>
 
+      <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+        <WordQuestBackButton onClick={handleBack} />
+      </div>
+
       {confirmLeave && (
-      <div className="wordquest-confirm-overlay" role="alertdialog" aria-modal="true" aria-labelledby="wq-leave-title">
-        <div className="wordquest-confirm-card">
-          <h3 id="wq-leave-title" className="h4">Leave this run?</h3>
-          <p className="p3">
-            Your run will end now and you can't start it again today.
-            {mode === "timed" ? " Your time is still counting down while you decide." : ""}
-          </p>
-          <div className="wordquest-confirm-actions">
-            <button type="button" className="btn wordquest-guess-btn" onClick={() => setConfirmLeave(false)} disabled={isBusy}>
-              Keep playing
-            </button>
-            <button type="button" className="btn btn-outline" onClick={handleForfeit} disabled={isBusy}>
-              Leave and end run
-            </button>
+        <div className="wordquest-confirm-overlay" role="alertdialog" aria-modal="true" aria-labelledby="wq-leave-title">
+          <div className="wordquest-confirm-card">
+            <h3 id="wq-leave-title" className="h4">
+              Leave this run?
+            </h3>
+            <p className="p3">
+              Your run will end now and you can't start it again today.
+              {mode === "timed" ? " Your time is still counting down while you decide." : ""}
+            </p>
+            <div className="wordquest-confirm-actions">
+              <button
+                type="button"
+                className="btn wordquest-guess-btn"
+                onClick={() => setConfirmLeave(false)}
+                disabled={isBusy}
+              >
+                Keep playing
+              </button>
+              <button type="button" className="btn btn-outline" onClick={handleForfeit} disabled={isBusy}>
+                Leave and end run
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
       {showLeaderboard && (
         <WordQuestChallengeLeaderboardModal

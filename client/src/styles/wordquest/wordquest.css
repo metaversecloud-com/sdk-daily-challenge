@@ -580,3 +580,22 @@ body,
 .rtsdk .wordquest-confirm-card h3,
 .rtsdk .wordquest-confirm-card p { margin: 0; }
 .rtsdk .wordquest-confirm-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+
+/* Go back matches the other buttons */
+.rtsdk .wordquest-back-btn {
+  font-family: inherit;
+  font-weight: 700;
+}
+
+/* Mode title: bold, and the same size as other section titles */
+.rtsdk .wordquest-challenge-header h2 {
+  margin: 0;
+  font-weight: 700;
+  font-size: 1.4rem;
+}
+
+.rtsdk .wordquest-back-btn {
+  font-family: inherit;
+  font-weight: 700;
+}
+.rtsdk .text-center h2 { text-align: center; }

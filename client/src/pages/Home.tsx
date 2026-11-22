@@ -1,21 +1,22 @@
-import { useContext, useEffect, useState, useRef} from "react";
+import { useContext, useEffect, useRef, useState } from "react";
+
 import { PageContainer } from "@/components";
-import { GlobalStateContext, GlobalDispatchContext } from "@/context/GlobalContext";
+import { GlobalDispatchContext, GlobalStateContext } from "@/context/GlobalContext";
 import { backendAPI, setGameState } from "@/utils";
+// import { getWordQuestErrorMessage } from "@/utils/wordquest/WordQuestAPI";
 import { WordQuestGameState } from "@shared/types/WordQuestTypes";
 import { WordQuestBoard } from "@/components/wordquest/WordQuestBoard";
 import { WordQuestStatsModal } from "@/components/wordquest/stats/WordQuestStatsModal";
 import { WordQuestModes, WordQuestMode } from "@/components/wordquest/WordQuestModes";
 import { WordQuestChallenge } from "@/components/wordquest/challenge/WordQuestChallenge";
-import "@/styles/wordquest/wordquest.css";
-import { loadAnswerList } from "@/components/wordquest/answerListCache";
-import { WordQuestBackButton } from "@/components/wordquest/WordQuestBackButton";
 import { WordQuestModeResults } from "@/components/wordquest/challenge/WordQuestModeResults";
-
+import { WordQuestBackButton } from "@/components/wordquest/WordQuestBackButton";
+import { loadAnswerList } from "@/components/wordquest/answerListCache";
+import "@/styles/wordquest/wordquest.css";
 
 export const Home = () => {
-  const { hasInteractiveParams } = useContext(GlobalStateContext);
   const dispatch = useContext(GlobalDispatchContext);
+  const { hasInteractiveParams } = useContext(GlobalStateContext);
 
   const [gameState, setGameStateLocal] = useState<WordQuestGameState | null>(null);
   const [currentGuess, setCurrentGuess] = useState("");
@@ -38,7 +39,7 @@ export const Home = () => {
           // Warm the cache so the admin panel opens instantly
           if (response.data.data.isAdmin) loadAnswerList().catch(() => {});
         })
-        .catch((err) => setError(err?.response?.data?.error || "Failed to load."))
+        .catch((err) => setError(getWordQuestErrorMessage(err, "Failed to load.")))
         .finally(() => setIsLoading(false));
     }
   }, [hasInteractiveParams]);
@@ -74,8 +75,8 @@ export const Home = () => {
     const timer = setTimeout(() => setError(null), 2500);
     return () => clearTimeout(timer);
   }, [error, gameState]);
-  
-    // The server grants badges before it answers the last guess, so one refetch picks up new ones
+
+  // The server grants badges before it answers the last guess, so one refetch picks up new ones
   const refreshBadges = async () => {
     try {
       const response = await backendAPI.get("/game-state", { params: { game: "wordquest" } });
@@ -85,6 +86,7 @@ export const Home = () => {
       /* the badges tab just keeps what it had */
     }
   };
+
   const handleSubmitGuess = async () => {
     if (!gameState || submitting.current) return;
     submitting.current = true;
@@ -101,7 +103,7 @@ export const Home = () => {
         refreshBadges();
       }
     } catch (err: any) {
-      setError(err?.response?.data?.error || "Something went wrong.");
+      setError(getWordQuestErrorMessage(err, "Something went wrong."));
     } finally {
       submitting.current = false;
       setIsSubmitting(false);
@@ -116,7 +118,7 @@ export const Home = () => {
       setError(null);
       setShowStats(false);
     } catch (err: any) {
-      setError(err?.response?.data?.error || "Reset failed.");
+      setError(getWordQuestErrorMessage(err, "Reset failed."));
     }
   };
 
@@ -130,7 +132,7 @@ export const Home = () => {
     setError(null);
     setShowStats(false);
     setMode(null);
-     refreshBadges();
+    refreshBadges();
   };
 
   return (
@@ -141,12 +143,14 @@ export const Home = () => {
         </p>
       )}
 
-      {gameState && mode === null && <WordQuestModes
-        onSelect={setMode}
-        onResults={handleResults}
-        badges={gameState.badges}
-        ownedBadges={gameState.visitorInventory?.badges}
-      />}
+      {gameState && mode === null && (
+        <WordQuestModes
+          onSelect={setMode}
+          onResults={handleResults}
+          badges={gameState.badges}
+          ownedBadges={gameState.visitorInventory?.badges}
+        />
+      )}
 
       {(mode === "timed" || mode === "oneshot") && (
         <WordQuestChallenge key={mode} mode={mode} onBack={backToModes} />
@@ -154,8 +158,6 @@ export const Home = () => {
 
       {gameState && mode === "classic" && (
         <div className="flex flex-col items-center gap-4 w-full">
-          <WordQuestBackButton onClick={backToModes} />
-  
           <div className="wordquest-board-wrap">
             <WordQuestBoard gameState={gameState} currentGuess={currentGuess} />
             <div className="wordquest-message" role="alert">
@@ -196,6 +198,10 @@ export const Home = () => {
             Stats
           </button>
 
+          <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+            <WordQuestBackButton onClick={backToModes} />
+          </div>
+
           {/* DEV ONLY — remove before shipping */}
           {gameState.isAdmin && (
             <button type="button" className="btn btn-outline" onClick={handleReset}>
@@ -205,7 +211,7 @@ export const Home = () => {
         </div>
       )}
 
-       {showStats && gameState && (
+      {showStats && gameState && (
         <WordQuestStatsModal
           stats={gameState.stats}
           status={gameState.status}
