@@ -158,7 +158,7 @@ export const WordQuestHome = () => {
 
       {gameState && mode === "classic" && (
         <div className="flex flex-col items-center gap-4 w-full">
-          <WordQuestBackButton onClick={backToModes} />
+         
 
           <div className="wordquest-board-wrap">
             <WordQuestBoard gameState={gameState} currentGuess={currentGuess} />
@@ -183,6 +183,9 @@ export const WordQuestHome = () => {
               </button>
             </div>
           )}
+          <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+            <WordQuestBackButton onClick={backToModes} />
+          </div>
 
           <button type="button" className="btn wordquest-stats-btn" onClick={() => setShowStats(true)}>
             <svg
