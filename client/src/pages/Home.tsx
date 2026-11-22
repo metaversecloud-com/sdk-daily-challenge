@@ -3,7 +3,6 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { PageContainer } from "@/components";
 import { GlobalDispatchContext, GlobalStateContext } from "@/context/GlobalContext";
 import { backendAPI, setGameState } from "@/utils";
-// import { getWordQuestErrorMessage } from "@/utils/wordquest/WordQuestAPI";
 import { WordQuestGameState } from "@shared/types/WordQuestTypes";
 import { WordQuestBoard } from "@/components/wordquest/WordQuestBoard";
 import { WordQuestStatsModal } from "@/components/wordquest/stats/WordQuestStatsModal";
@@ -39,7 +38,7 @@ export const Home = () => {
           // Warm the cache so the admin panel opens instantly
           if (response.data.data.isAdmin) loadAnswerList().catch(() => {});
         })
-        .catch((err) => setError(getWordQuestErrorMessage(err, "Failed to load.")))
+        .catch((err) => setError(err?.response?.data?.error || "Failed to load."))
         .finally(() => setIsLoading(false));
     }
   }, [hasInteractiveParams]);
@@ -103,7 +102,7 @@ export const Home = () => {
         refreshBadges();
       }
     } catch (err: any) {
-      setError(getWordQuestErrorMessage(err, "Something went wrong."));
+      setError(err?.response?.data?.error || "Something went wrong.");
     } finally {
       submitting.current = false;
       setIsSubmitting(false);
@@ -118,7 +117,7 @@ export const Home = () => {
       setError(null);
       setShowStats(false);
     } catch (err: any) {
-      setError(getWordQuestErrorMessage(err, "Reset failed."));
+      setError(err?.response?.data?.error || "Reset failed.");
     }
   };
 
