@@ -230,7 +230,6 @@ export const WordQuestChallenge = ({ mode, onBack }: Props) => {
       <div className="wordquest-challenge-header">
         <h2 className="h4">{title}</h2>
       </div>
-      <p className="p3">status: {state?.status ?? "none"}</p>
       {state?.status === "notStarted" && (
         <div className="wordquest-intro-card">
           <p className="p2 wordquest-intro-lead">
