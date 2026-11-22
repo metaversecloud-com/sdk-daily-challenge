@@ -43,7 +43,6 @@ export const WordQuestModes = ({ onSelect, onResults, badges, ownedBadges }: Pro
 
       {tab === "play" ? (
         <div role="tabpanel">
-          <h2 className="h4">Choose a mode</h2>
           <ul className="wordquest-mode-list">
             {MODES.map((mode) => (
               <li key={mode.id} className="wordquest-mode-row">

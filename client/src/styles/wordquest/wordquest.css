@@ -628,3 +628,12 @@ body,
 .gm-screen--wordquest .wordquest-intro-card .wordquest-intro-note {
   font-size: 0.85rem;
 }
+
+/* Only the page title is big; headings below it are section titles */
+.gm-screen--wordquest .wordquest-modes h2,
+.gm-screen--wordquest .wordquest-challenge-header h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+}

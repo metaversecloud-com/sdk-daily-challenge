@@ -183,9 +183,6 @@ export const WordQuestHome = () => {
               </button>
             </div>
           )}
-          <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
-            <WordQuestBackButton onClick={backToModes} />
-          </div>
 
           <button type="button" className="btn wordquest-stats-btn" onClick={() => setShowStats(true)}>
             <svg
@@ -202,6 +199,9 @@ export const WordQuestHome = () => {
             </svg>
             Stats
           </button>
+           <div style={{ display: "flex", justifyContent: "center", width: "100%" }}>
+            <WordQuestBackButton onClick={backToModes} />
+          </div>
 
           {/* DEV ONLY — remove before shipping */}
           {gameState.isAdmin && (
