@@ -4,7 +4,7 @@ import { useContext, useEffect, useState } from "react";
 import { GlobalStateContext } from "@/context/GlobalContext";
 
 // types
-import { WordHuntLeaderboardResponse } from "@shared/types/wordhunt/WordHuntTypes";
+import { WordHuntLeaderboardResponse, WordHuntMode } from "@shared/types/wordhunt/WordHuntTypes";
 
 // utils
 import { backendAPI } from "@/utils";
@@ -12,9 +12,11 @@ import { backendAPI } from "@/utils";
 interface WordHuntLeaderboardProps {
   /** Changing this value reloads the leaderboard (e.g. after a game ends). */
   refreshKey?: string;
+  /** Each mode has its own leaderboard. */
+  mode?: WordHuntMode;
 }
 
-export const WordHuntLeaderboard = ({ refreshKey }: WordHuntLeaderboardProps) => {
+export const WordHuntLeaderboard = ({ refreshKey, mode = "classic" }: WordHuntLeaderboardProps) => {
   const { hasInteractiveParams } = useContext(GlobalStateContext);
 
   const [leaderboard, setLeaderboard] = useState<WordHuntLeaderboardResponse | null>(null);
@@ -25,7 +27,7 @@ export const WordHuntLeaderboard = ({ refreshKey }: WordHuntLeaderboardProps) =>
     let isCurrent = true;
     setHasError(false);
     backendAPI
-      .get("/wordhunt/leaderboard")
+      .get("/wordhunt/leaderboard", { params: { mode } })
       .then((response) => {
         if (isCurrent) setLeaderboard(response.data.data as WordHuntLeaderboardResponse);
       })
@@ -35,7 +37,7 @@ export const WordHuntLeaderboard = ({ refreshKey }: WordHuntLeaderboardProps) =>
     return () => {
       isCurrent = false;
     };
-  }, [hasInteractiveParams, refreshKey]);
+  }, [hasInteractiveParams, refreshKey, mode]);
 
   const entries = leaderboard?.entries ?? [];
   const me = leaderboard?.me;
@@ -44,7 +46,7 @@ export const WordHuntLeaderboard = ({ refreshKey }: WordHuntLeaderboardProps) =>
   return (
     <section className="wh-panel" aria-labelledby="wh-leaderboard-heading">
       <h2 id="wh-leaderboard-heading" className="h4 mb-2">
-        Today&apos;s Leaderboard
+        {mode === "golden" ? "Today's Golden Leaderboard" : "Today's Leaderboard"}
       </h2>
 
       {hasError ? (
@@ -57,7 +59,9 @@ export const WordHuntLeaderboard = ({ refreshKey }: WordHuntLeaderboardProps) =>
         <p className="p2">No scores yet today. Be the first!</p>
       ) : (
         <table className="wh-leaderboard p2">
-          <caption className="sr-only">Highest Word Hunt scores for today</caption>
+          <caption className="sr-only">
+            Highest {mode === "golden" ? "Golden Letter" : "Word Hunt"} scores for today
+          </caption>
           <thead>
             <tr>
               <th scope="col">Rank</th>

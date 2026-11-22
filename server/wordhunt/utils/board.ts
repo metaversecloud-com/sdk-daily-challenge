@@ -1,5 +1,14 @@
-import { WordHuntBoard } from "@shared/types/wordhunt/WordHuntTypes.js";
-import { BOARD_SIZE, BOARD_TIMEZONE, LETTER_DICE, MAX_BOARD_ATTEMPTS, MIN_WORDS_PER_BOARD } from "./constants.js";
+import { WordHuntBoard, WordHuntGoals, WordHuntMode } from "@shared/types/wordhunt/WordHuntTypes.js";
+import { isGoldenWord } from "@shared/wordhunt/golden.js";
+import {
+  BOARD_SIZE,
+  BOARD_TIMEZONE,
+  getPointsForWord,
+  LETTER_DICE,
+  MAX_BOARD_ATTEMPTS,
+  MIN_WORDS_PER_BOARD,
+} from "./constants.js";
+import { getWordFrequency } from "./definitions.js";
 import { getDictionary } from "./dictionary.js";
 
 /** Today's date (YYYY-MM-DD) in the board timezone. */
@@ -93,30 +102,112 @@ export const findAllWords = (tiles: string[], size = BOARD_SIZE) => {
   return found;
 };
 
-const boardCache = new Map<string, WordHuntBoard>();
+const boardCache = new Map<string, { board: WordHuntBoard; words: Set<string> }>();
+// Today's boards plus a few earlier ones (finishing an old, abandoned game looks up that day's words), so an
+// earlier day's lookup doesn't evict today's board and force it to be rebuilt.
+export const MAX_CACHED_DATES = 3;
+
+/*
+ * Golden mode. The golden letter should be found in a fair share of the board's words: on real boards a letter can
+ * appear in anywhere from 0% to 70%+ of them, which would make the bonus either useless or nearly automatic.
+ */
+const GOLDEN_SHARE_MIN = 0.15;
+const GOLDEN_SHARE_MAX = 0.35;
+const GOLDEN_SHARE_TARGET = 0.25;
+const VOWELS = new Set(["a", "e", "i", "o", "u"]);
+
+/** Number of easiest words a player would need for each goal (easiest = shortest, then most common). */
+export const GOAL_WORD_COUNTS = { bronze: 8, silver: 15, gold: 25 } as const;
 
 /**
- * Returns the board for the given date. The board is generated deterministically from the date,
- * so every player (and every server instance) gets the same board on the same day.
+ * Picks the golden letter for a board: a single-letter tile (never "Qu") found in 15-35% of its words, preferring
+ * consonants and letters on fewer tiles (so players have to hunt for them). Ties are broken by the date, so the
+ * pick is the same for everyone. If no letter is in that range (rare), the one closest to 25% is used.
  */
-export const getDailyBoard = (date = getBoardDate()): WordHuntBoard => {
-  const cached = boardCache.get(date);
-  if (cached) return cached;
+export const pickGoldenLetter = (tiles: string[], words: Set<string>, seed: string) => {
+  const wordList = [...words];
+  const letters = [...new Set(tiles.filter((tile) => tile.length === 1).map((tile) => tile.toLowerCase()))];
+  const candidates = letters
+    .map((letter) => ({
+      letter,
+      share: wordList.length ? wordList.filter((word) => word.includes(letter)).length / wordList.length : 0,
+      tileCount: tiles.filter((tile) => tile.toLowerCase() === letter).length,
+      isVowel: VOWELS.has(letter),
+      tieBreak: hashString(`${seed}-${letter}`),
+    }))
+    .filter(({ share }) => share > 0);
+  if (candidates.length === 0) return undefined;
 
+  const inRange = candidates.filter(({ share }) => share >= GOLDEN_SHARE_MIN && share <= GOLDEN_SHARE_MAX);
+  const pool = inRange.length
+    ? inRange.sort((a, b) => Number(a.isVowel) - Number(b.isVowel) || a.tileCount - b.tileCount || a.tieBreak - b.tieBreak)
+    : candidates.sort((a, b) => Math.abs(a.share - GOLDEN_SHARE_TARGET) - Math.abs(b.share - GOLDEN_SHARE_TARGET));
+  return pool[0].letter;
+};
+
+/**
+ * Bronze, silver, and gold targets: the points a player would get from the board's 8, 15, and 25 easiest words
+ * (shortest first, then most common), with golden words doubled. This scales with how rich the board is
+ * (boards range from about 64k to 440k total points) while staying reachable. Rounded to the nearest 100.
+ */
+export const getGoals = (words: Set<string>, goldenLetter: string | undefined): WordHuntGoals => {
+  const ranked = [...words].sort(
+    (a, b) => a.length - b.length || getWordFrequency(b) - getWordFrequency(a) || a.localeCompare(b),
+  );
+  const points = ranked.map((word) => getPointsForWord(word) * (isGoldenWord(word, goldenLetter) ? 2 : 1));
+  const total = (count: number) => Math.round(points.slice(0, count).reduce((sum, value) => sum + value, 0) / 100) * 100;
+  const bronze = Math.max(total(GOAL_WORD_COUNTS.bronze), 100);
+  const silver = Math.max(total(GOAL_WORD_COUNTS.silver), bronze + 100);
+  const gold = Math.max(total(GOAL_WORD_COUNTS.gold), silver + 100);
+  return { bronze, silver, gold };
+};
+
+const getCacheKey = (date: string, mode: WordHuntMode) => `${mode}:${date}`;
+
+/**
+ * Returns the board for the given date and mode. Each mode's board is generated deterministically from the date
+ * (with its own seed, so the modes have different boards), so every player and every server instance gets the
+ * same board on the same day. Golden boards also carry the golden letter and score goals.
+ */
+export const getDailyBoard = (date = getBoardDate(), mode: WordHuntMode = "classic"): WordHuntBoard => {
+  const key = getCacheKey(date, mode);
+  const cached = boardCache.get(key);
+  if (cached) return cached.board;
+
+  // Classic keeps its original seed, so classic boards are unchanged.
+  const seedPrefix = mode === "classic" ? "wordhunt" : `wordhunt-${mode}`;
   let bestTiles: string[] = [];
-  let bestCount = -1;
+  let bestWords = new Set<string>();
   for (let attempt = 0; attempt < MAX_BOARD_ATTEMPTS; attempt++) {
-    const tiles = rollTiles(createRandom(hashString(`wordhunt-${date}-${attempt}`)));
-    const count = findAllWords(tiles).size;
-    if (count > bestCount) {
+    const tiles = rollTiles(createRandom(hashString(`${seedPrefix}-${date}-${attempt}`)));
+    const words = findAllWords(tiles);
+    if (words.size > bestWords.size || attempt === 0) {
       bestTiles = tiles;
-      bestCount = count;
+      bestWords = words;
     }
-    if (count >= MIN_WORDS_PER_BOARD) break;
+    if (words.size >= MIN_WORDS_PER_BOARD) break;
   }
 
   const board: WordHuntBoard = { date, size: BOARD_SIZE, tiles: bestTiles };
-  boardCache.clear(); // only today's board is ever needed
-  boardCache.set(date, board);
+  if (mode === "golden") {
+    board.goldenLetter = pickGoldenLetter(bestTiles, bestWords, `${seedPrefix}-${date}`);
+    board.goals = getGoals(bestWords, board.goldenLetter);
+  }
+  boardCache.set(key, { board, words: bestWords });
+  // Two modes per day, so keep both modes for the last few days.
+  if (boardCache.size > MAX_CACHED_DATES * 2) boardCache.delete(boardCache.keys().next().value!);
   return board;
 };
+
+/** Every dictionary word that can be made on the given day's board (computed once along with the board). */
+export const getDailyWords = (date = getBoardDate(), mode: WordHuntMode = "classic") => {
+  getDailyBoard(date, mode);
+  return boardCache.get(getCacheKey(date, mode))!.words;
+};
+
+/**
+ * Every word on the given day's board with its base points, for the client to check words instantly.
+ * (In golden mode the client applies the golden multiplier itself, with the shared scoring rules.)
+ */
+export const getDailyWordPoints = (date = getBoardDate(), mode: WordHuntMode = "classic"): Record<string, number> =>
+  Object.fromEntries([...getDailyWords(date, mode)].map((word) => [word, getPointsForWord(word)]));

@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Midas Touch badge">
+  <defs>
+    <linearGradient id="frame" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7c948"/><stop offset="1" stop-color="#d49a06"/></linearGradient>
+    <radialGradient id="coin" cx="0.4" cy="0.35" r="0.7"><stop offset="0" stop-color="#fff1a8"/><stop offset="0.6" stop-color="#f2b705"/><stop offset="1" stop-color="#c58b00"/></radialGradient>
+    <clipPath id="inner"><rect x="22" y="22" width="156" height="156" rx="22"/></clipPath>
+  </defs>
+  <rect x="6" y="6" width="188" height="188" rx="34" fill="#3b2a12"/>
+  <rect x="11" y="11" width="178" height="178" rx="30" fill="url(#frame)"/>
+  <rect x="22" y="22" width="156" height="156" rx="22" fill="#1f3a5c"/>
+  <g clip-path="url(#inner)" fill="#2b4c74">
+    <path d="M100 100 L60 22 L84 22 Z M100 100 L116 22 L140 22 Z M100 100 L178 52 L178 76 Z M100 100 L178 124 L178 148 Z M100 100 L140 178 L116 178 Z M100 100 L84 178 L60 178 Z M100 100 L22 148 L22 124 Z M100 100 L22 76 L22 52 Z"/>
+  </g>
+  <!-- a stack of coins topped by a large gold coin -->
+  <g stroke="#2a1d06" stroke-width="3">
+    <ellipse cx="100" cy="150" rx="40" ry="10" fill="#d49a06"/>
+    <ellipse cx="100" cy="142" rx="40" ry="10" fill="#f2b705"/>
+    <circle cx="100" cy="94" r="44" fill="url(#coin)"/>
+    <circle cx="100" cy="94" r="34" fill="none" stroke="#c58b00" stroke-width="3"/>
+  </g>
+  <path d="M100 70 l7 15 16 2 -12 11 3 16 -14 -8 -14 8 3 -16 -12 -11 16 -2z" fill="#2a1d06"/>
+  <g fill="#fff">
+    <path d="M152 40 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z"/>
+    <path d="M44 58 l2 6 6 2 -6 2 -2 6 -2 -6 -6 -2 6 -2z"/>
+    <path d="M154 128 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z"/>
+  </g>
+</svg>

@@ -282,6 +282,373 @@ body:has(.wh-app) {
   border-bottom: 0;
 }
 
+/* ---------- Word of the Day ---------- */
+
+.wh-wotd {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.wh-wotd h2,
+.wh-wotd p {
+  margin: 0;
+}
+
+.wh-wotd .wh-wotd-word {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+}
+
+.wh-wotd-points {
+  flex-shrink: 0;
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.wh-wotd-status {
+  font-weight: 700;
+}
+
+.wh-wotd .wh-wotd-status--found {
+  color: var(--wh-success);
+}
+
+.wh-wotd .wh-wotd-definition {
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--wh-divider);
+}
+
+.wh-wotd-pos {
+  font-style: italic;
+  font-weight: 700;
+}
+
+/* ---------- Admin tools ---------- */
+
+.wh-admin-bar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.wh-admin-bar .btn-icon {
+  margin-bottom: 8px;
+}
+
+.wh-admin {
+  text-align: left;
+}
+
+.wh-admin h2:focus {
+  outline: none;
+}
+
+.wh-admin-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--wh-divider);
+}
+
+.wh-admin-section h3,
+.wh-admin-section p,
+.wh-admin-confirm p {
+  margin: 0;
+}
+
+.wh-admin .actions {
+  margin-top: 16px;
+}
+
+.wh-admin .wh-admin-status:empty {
+  display: none;
+}
+
+/* ---------- Admin stats ---------- */
+
+.wh-admin-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--wh-divider);
+}
+
+.wh-admin-stats h3:focus {
+  outline: none;
+}
+
+.wh-admin-stats p {
+  margin: 0;
+}
+
+.wh-admin-stats-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.wh-admin-stats-header h3 {
+  margin: 0;
+}
+
+.wh-admin-stats-header select {
+  width: auto;
+  margin-left: 4px;
+}
+
+.wh-stats-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.wh-stats-summary-item {
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: var(--wh-panel-hover);
+}
+
+.wh-stats-summary-item dt {
+  margin: 0;
+}
+
+.wh-stats-summary-item dd {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--wh-navy);
+}
+
+.wh-stats-table-wrap {
+  max-height: 300px;
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid var(--wh-divider);
+}
+
+.wh-stats-table-wrap:focus-visible {
+  outline: 3px solid var(--wh-focus);
+  outline-offset: 2px;
+}
+
+.wh-stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+
+.wh-stats-table th,
+.wh-stats-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--wh-divider);
+  color: var(--wh-navy);
+  text-align: right;
+}
+
+.wh-stats-table th:first-child {
+  text-align: left;
+}
+
+.wh-stats-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--wh-panel);
+}
+
+.wh-stats-table tbody tr:last-child th,
+.wh-stats-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* ---------- Game modes ---------- */
+
+.wh-mode-picker {
+  display: flex;
+  gap: 8px;
+  padding: 4px;
+  background: var(--wh-panel);
+  border-radius: 16px;
+}
+
+.wh-mode {
+  flex: 1;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--wh-navy);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.wh-mode--active {
+  background: var(--wh-navy);
+  color: var(--wh-panel);
+}
+
+.wh-mode:focus-visible {
+  outline: 3px solid var(--wh-focus);
+  outline-offset: 2px;
+}
+
+.wh-mode-done {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* ---------- Golden Letter mode ---------- */
+
+/* The whole screen (and its popups) switches to the gold palette by overriding the Word Hunt tokens. */
+body:has(.wh-app--golden) {
+  --wh-bg: var(--wh-golden-bg);
+  --wh-panel: var(--wh-golden-panel);
+  --wh-panel-hover: var(--wh-golden-panel-hover);
+  --wh-navy: var(--wh-golden-text);
+  --wh-navy-hover: var(--wh-golden-text-hover);
+  --wh-divider: var(--wh-golden-divider);
+  --wh-focus: var(--wh-golden-focus);
+  --wh-tile-selected: var(--wh-golden-tile-selected);
+}
+
+/* Room for the golden status bar, so the board still fits without scrolling. */
+.wh-app--golden {
+  --wh-grid-reserved-height: 350px;
+}
+
+.wh-tile--golden .wh-tile-face {
+  position: relative;
+  background: var(--wh-golden-tile);
+}
+
+.wh-tile--golden.wh-tile--selected .wh-tile-face {
+  background: var(--wh-tile-selected);
+}
+
+.wh-tile-star {
+  position: absolute;
+  top: 2px;
+  right: 4px;
+  font-size: 45%;
+  line-height: 1;
+}
+
+.wh-golden-intro {
+  text-align: center;
+}
+
+.wh-golden-intro p {
+  margin: 0;
+}
+
+.wh-golden-intro .wh-golden-letter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 84px;
+  height: 84px;
+  margin: 8px 0 4px;
+  border: 3px solid var(--wh-tile-border);
+  border-radius: 16px;
+  background: var(--wh-golden-tile);
+  color: var(--wh-tile-border);
+  font-size: 48px;
+  font-weight: 800;
+}
+
+.wh-goals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 12px 0 0;
+}
+
+.wh-goal {
+  padding: 8px 6px;
+  border-top: 4px solid transparent;
+  border-radius: 12px;
+  background: var(--wh-panel-hover);
+}
+
+.wh-goal dt {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.wh-goal dd {
+  margin: 2px 0 0;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.wh-goal--bronze {
+  border-top-color: var(--wh-medal-bronze);
+}
+
+.wh-goal--silver {
+  border-top-color: var(--wh-medal-silver);
+}
+
+.wh-goal--gold {
+  border-top-color: var(--wh-medal-gold);
+}
+
+.wh-golden-status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin-bottom: 10px;
+  padding: 10px 16px;
+  font-size: 14px;
+}
+
+.wh-golden-status p {
+  margin: 0;
+}
+
+.wh-medal {
+  border: 3px solid transparent;
+}
+
+.wh-medal h2,
+.wh-medal p {
+  margin: 0;
+}
+
+.wh-medal p {
+  margin-top: 4px;
+}
+
+.wh-medal--bronze {
+  border-color: var(--wh-medal-bronze);
+}
+
+.wh-medal--silver {
+  border-color: var(--wh-medal-silver);
+}
+
+.wh-medal--gold {
+  border-color: var(--wh-medal-gold);
+}
+
 /* ---------- Modal ---------- */
 
 .rtsdk .wh-modal {
