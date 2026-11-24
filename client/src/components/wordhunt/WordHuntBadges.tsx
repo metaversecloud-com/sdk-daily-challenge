@@ -5,17 +5,39 @@ import { GlobalDispatchContext, GlobalStateContext } from "@/context/GlobalConte
 import { ErrorType } from "@/context/types";
 
 // types
-import { WordHuntBadge, WordHuntBadgeCategory, WordHuntBadgesResponse } from "@shared/types/wordhunt/WordHuntTypes";
+import {
+  WordHuntBadge,
+  WordHuntBadgeCategory,
+  WordHuntBadgesResponse,
+  WordHuntMode,
+} from "@shared/types/wordhunt/WordHuntTypes";
 
 // utils
 import { backendAPI, setErrorMessage } from "@/utils";
 
-const CATEGORIES: { id: WordHuntBadgeCategory; label: string }[] = [
-  { id: "play", label: "Play" },
-  { id: "score", label: "Score" },
-  { id: "special", label: "Special" },
-  // Earned in Golden Letter mode.
-  { id: "golden", label: "Golden Letter" },
+/** Badges are grouped by the game mode that earns them, then by category. */
+const MODE_SECTIONS: {
+  mode: WordHuntMode;
+  title: string;
+  note: string;
+  categories: { id: WordHuntBadgeCategory; label: string }[];
+}[] = [
+  {
+    mode: "classic",
+    title: "Classic badges",
+    note: "Earned by playing Classic games.",
+    categories: [
+      { id: "play", label: "Play" },
+      { id: "score", label: "Score" },
+      { id: "special", label: "Special" },
+    ],
+  },
+  {
+    mode: "golden",
+    title: "Golden Letter badges",
+    note: "Earned by playing Golden Letter games.",
+    categories: [{ id: "golden", label: "Golden Letter" }],
+  },
 ];
 
 const getBadgeStatus = (badge: WordHuntBadge) => {
@@ -25,6 +47,8 @@ const getBadgeStatus = (badge: WordHuntBadge) => {
   }
   return "Locked";
 };
+
+const MODE_NAMES: Record<WordHuntMode, string> = { classic: "Classic", golden: "Golden Letter" };
 
 interface WordHuntBadgesProps {
   /** Changing this value reloads the badges (e.g. after a game ends). */
@@ -76,6 +100,12 @@ export const WordHuntBadges = ({ refreshKey }: WordHuntBadgesProps) => {
           <>
             <h2 className="h4">{selected.name}</h2>
             <p className="p2">{selected.description}</p>
+            <p className="p3">
+              <span className={`wh-badge-mode wh-badge-mode--${selected.mode}`}>
+                {selected.mode === "golden" && <span aria-hidden="true">★ </span>}
+                Earned in {MODE_NAMES[selected.mode]} games
+              </span>
+            </p>
             <p className="p3 wh-badge-status">{getBadgeStatus(selected)}</p>
           </>
         ) : (
@@ -83,43 +113,69 @@ export const WordHuntBadges = ({ refreshKey }: WordHuntBadgesProps) => {
         )}
       </div>
 
-      {CATEGORIES.map(({ id, label }) => (
-        <section key={id} aria-labelledby={`wh-badges-${id}`}>
-          <h2 id={`wh-badges-${id}`} className="h4 wh-badge-heading">
-            {label}
-          </h2>
-          <ul className="wh-badge-grid">
-            {badges
-              .filter((badge) => badge.category === id)
-              .map((badge) => (
-                <li
-                  key={badge.slug}
-                  className={`wh-badge-item ${badge.slug === dismissedTipSlug ? "wh-badge-item--tip-dismissed" : ""}`}
-                  onMouseLeave={() => setDismissedTipSlug(null)}
-                >
-                  <button
-                    type="button"
-                    className={`wh-badge ${badge.earned ? "" : "wh-badge--locked"} ${
-                      badge.slug === selectedSlug ? "wh-badge--selected" : ""
-                    }`}
-                    aria-pressed={badge.slug === selectedSlug}
-                    aria-describedby={`wh-badge-tip-${badge.slug}`}
-                    onClick={() => setSelectedSlug(badge.slug)}
-                    onBlur={() => setDismissedTipSlug(null)}
-                    onKeyDown={(event) => event.key === "Escape" && setDismissedTipSlug(badge.slug)}
-                  >
-                    <img src={badge.image} alt="" width={88} height={88} />
-                    <span className="wh-badge-name">{badge.name}</span>
-                  </button>
-                  <span id={`wh-badge-tip-${badge.slug}`} role="tooltip" className="wh-badge-tip p3">
-                    {badge.description}
-                    <span className="wh-badge-tip-status">{getBadgeStatus(badge)}</span>
-                  </span>
-                </li>
-              ))}
-          </ul>
-        </section>
-      ))}
+      {MODE_SECTIONS.map(({ mode, title, note, categories }) => {
+        const modeBadges = badges.filter((badge) => badge.mode === mode);
+        // A section with a single category doesn't need a separate category heading.
+        const showCategoryHeadings = categories.length > 1;
+        return (
+          <section
+            key={mode}
+            className={`wh-panel wh-badge-section wh-badge-section--${mode}`}
+            aria-labelledby={`wh-badges-mode-${mode}`}
+          >
+            <div className="wh-badge-section-header">
+              <h2 id={`wh-badges-mode-${mode}`} className="h4">
+                {mode === "golden" && <span aria-hidden="true">★ </span>}
+                {title}
+              </h2>
+              <p className="p3">
+                {note} {modeBadges.filter((badge) => badge.earned).length} of {modeBadges.length} earned.
+              </p>
+            </div>
+            {categories.map(({ id, label }) => (
+              <div key={id} {...(showCategoryHeadings && { role: "group", "aria-labelledby": `wh-badges-${id}` })}>
+                {showCategoryHeadings && (
+                  <h3 id={`wh-badges-${id}`} className="p2 wh-badge-heading">
+                    {label}
+                  </h3>
+                )}
+                <ul className="wh-badge-grid">
+                  {modeBadges
+                    .filter((badge) => badge.category === id)
+                    .map((badge) => (
+                      <li
+                        key={badge.slug}
+                        className={`wh-badge-item ${badge.slug === dismissedTipSlug ? "wh-badge-item--tip-dismissed" : ""}`}
+                        onMouseLeave={() => setDismissedTipSlug(null)}
+                      >
+                        <button
+                          type="button"
+                          className={`wh-badge ${badge.earned ? "" : "wh-badge--locked"} ${
+                            badge.slug === selectedSlug ? "wh-badge--selected" : ""
+                          }`}
+                          aria-pressed={badge.slug === selectedSlug}
+                          aria-describedby={`wh-badge-tip-${badge.slug}`}
+                          onClick={() => setSelectedSlug(badge.slug)}
+                          onBlur={() => setDismissedTipSlug(null)}
+                          onKeyDown={(event) => event.key === "Escape" && setDismissedTipSlug(badge.slug)}
+                        >
+                          <img src={badge.image} alt="" width={88} height={88} />
+                          <span className="wh-badge-name">{badge.name}</span>
+                          {/* Earned/locked is read from the tooltip (aria-describedby); this adds the mode. */}
+                          <span className="sr-only">, {MODE_NAMES[badge.mode]} badge</span>
+                        </button>
+                        <span id={`wh-badge-tip-${badge.slug}`} role="tooltip" className="wh-badge-tip p3">
+                          {badge.description}
+                          <span className="wh-badge-tip-status">{getBadgeStatus(badge)}</span>
+                        </span>
+                      </li>
+                    ))}
+                </ul>
+              </div>
+            ))}
+          </section>
+        );
+      })}
     </div>
   );
 };

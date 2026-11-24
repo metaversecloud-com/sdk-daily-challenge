@@ -109,7 +109,7 @@ export const WordHuntStart = ({
               <li>Words with the golden letter score double. Golden tiles are marked with a ★.</li>
               <li>Find golden words in a row for an even bigger bonus: ×2, ×2.5, ×3, ×3.5, up to ×4.</li>
               <li>Reach the bronze, silver, or gold goal before time runs out!</li>
-              <li>Golden Letter games don&apos;t count toward badges.</li>
+              <li>Golden Letter games earn the Golden Letter badges (Classic badges come from Classic games).</li>
             </>
           ) : (
             <li>Longer words earn more points: 3 letters = 200, up to 1,400 for 8+ letters.</li>
