@@ -169,6 +169,8 @@ export interface WordHuntBadge {
   name: string;
   description: string;
   category: WordHuntBadgeCategory;
+  /** The game mode whose games earn this badge. */
+  mode: WordHuntMode;
   earned: boolean;
   /** Progress toward the badge, for badges that count something. */
   progress: { current: number; target: number } | null;

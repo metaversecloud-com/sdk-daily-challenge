@@ -79,6 +79,12 @@ describe("wordhunt badges", () => {
     expect(recordFinishedGame(after, makeGame("2026-01-02", 100))).toMatchObject({ goldenBestStreak: 2, goldenMostWords: 2 });
   });
 
+  test("each badge says which game mode earns it", () => {
+    const badges = buildBadgeList(undefined);
+    expect(badges.filter((b) => b.mode === "golden").map((b) => b.name)).toEqual(["Gold Rush!", "Midas Touch"]);
+    expect(badges.filter((b) => b.mode === "classic")).toHaveLength(12);
+  });
+
   test("the golden badges are in their own group with their own pictures", () => {
     const golden = buildBadgeList(undefined).filter((b) => b.category === "golden");
     expect(golden.map((b) => [b.name, b.image])).toEqual([

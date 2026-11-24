@@ -516,30 +516,17 @@ body:has(.wh-app) {
 
 /* ---------- Golden Letter mode ---------- */
 
-/* The whole screen (and its popups) switches to the gold palette by overriding the Word Hunt tokens. */
-body:has(.wh-app--golden) {
-  --wh-bg: var(--wh-golden-bg);
-  --wh-panel: var(--wh-golden-panel);
-  --wh-panel-hover: var(--wh-golden-panel-hover);
-  --wh-navy: var(--wh-golden-text);
-  --wh-navy-hover: var(--wh-golden-text-hover);
-  --wh-divider: var(--wh-golden-divider);
-  --wh-focus: var(--wh-golden-focus);
-  --wh-tile-selected: var(--wh-golden-tile-selected);
-}
+/* Golden Letter mode uses the same colors as Classic everywhere; golden tiles get a ring and a ★ to stand out. */
 
 /* Room for the golden status bar, so the board still fits without scrolling. */
 .wh-app--golden {
   --wh-grid-reserved-height: 350px;
 }
 
+/* Same cream tile (and the usual yellow when selected), with a dark-gold ring inside the border and a ★. */
 .wh-tile--golden .wh-tile-face {
   position: relative;
-  background: var(--wh-golden-tile);
-}
-
-.wh-tile--golden.wh-tile--selected .wh-tile-face {
-  background: var(--wh-tile-selected);
+  box-shadow: inset 0 0 0 4px var(--wh-golden-ring);
 }
 
 .wh-tile-star {
@@ -567,7 +554,8 @@ body:has(.wh-app--golden) {
   margin: 8px 0 4px;
   border: 3px solid var(--wh-tile-border);
   border-radius: 16px;
-  background: var(--wh-golden-tile);
+  background: var(--wh-panel);
+  box-shadow: inset 0 0 0 5px var(--wh-golden-ring);
   color: var(--wh-tile-border);
   font-size: 48px;
   font-weight: 800;
@@ -648,6 +636,49 @@ body:has(.wh-app--golden) {
 .wh-medal--gold {
   border-color: var(--wh-medal-gold);
 }
+
+/* ---------- Badges by game mode ---------- */
+
+.wh-badge-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-left: 6px solid var(--wh-navy);
+}
+
+/* Golden Letter badges get a gold edge; the "★" in the heading means this doesn't rely on color alone. */
+.wh-badge-section--golden {
+  border-left-color: var(--wh-golden-ring);
+}
+
+.wh-badge-section-header h2,
+.wh-badge-section-header p {
+  margin: 0;
+}
+
+.wh-badge-section-header p {
+  margin-top: 2px;
+}
+
+.wh-badge-section .wh-badge-heading {
+  margin: 0 0 6px 2px;
+  font-weight: 700;
+}
+
+/* Inside a panel, badge tiles need a slightly different fill to stand out. */
+.wh-badge-section .wh-badge {
+  background: var(--wh-panel-hover);
+}
+
+.wh-badge-mode {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-weight: 700;
+  background: var(--wh-panel-hover);
+}
+
+
 
 /* ---------- Modal ---------- */
 
