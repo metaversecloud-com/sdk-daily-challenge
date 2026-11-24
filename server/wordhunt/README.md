@@ -21,10 +21,10 @@ Picked on the start screen. Each mode has its own daily board (its own seed), on
 
 - **Classic**: the original game. Its board, saved data, leaderboard (`dailyLeaderboard`), and analytics are unchanged.
 - **Golden Letter** (`golden`):
-  - **Golden letter**: each day's golden board has a golden letter (`utils/board.ts` → `pickGoldenLetter`): a single-letter tile found in 15–35% of that board's words, preferring consonants and letters on fewer tiles (a random letter would range from 0% to 70%+). Golden tiles are gold with a ★.
+  - **Golden letter**: each day's golden board has a golden letter (`utils/board.ts` → `pickGoldenLetter`): a single-letter tile found in 15–35% of that board's words, preferring consonants and letters on fewer tiles (a random letter would range from 0% to 70%+). Golden tiles have a dark-gold ring and a ★.
   - **Scoring** (`shared/wordhunt/golden.ts`, used by both server and client so instant feedback always matches): a word with the golden letter scores ×2 (once per word). Each golden word in a row adds 0.5×: ×2, ×2.5, ×3, ×3.5, up to ×4. A non-golden word resets the streak; invalid attempts don't. The streak is saved with each word (`game.goldenStreak`).
   - **Goals**: bronze/silver/gold are the points from the board's 8/15/25 easiest words (shortest, then most common), with golden words doubled, rounded to 100 (`getGoals`). Shown on the start screen, during play, and as a medal on the results screen.
-  - **Look**: a warm gold theme (tokens in `client/src/styles/tokens.css`).
+  - **Look**: the same colors as Classic on every screen (including Badges); only golden tiles and golden badges get gold accents (`--wh-golden-ring` in `client/src/styles/tokens.css`).
   - **Golden badges** (in the same Badges tab, under "Golden Letter"): **Gold Rush!** (5 golden words in a row in one game) and **Midas Touch** (10 golden words in one game). Golden games only update two golden bests on the player's stats (`goldenBestStreak`, `goldenMostWords`), so they never count toward the classic badges, games played, scores, or streaks. The pictures are placeholder SVGs in `client/public/badges/`; like the other badges, they're granted from the Topia ecosystem inventory by name, so items named exactly `Gold Rush!` and `Midas Touch` must exist there.
   - **Kept separate from classic**: saved under `<urlSlug>-<sceneDropId>.wordhunt.golden`, ranked on `goldenDailyLeaderboard`, and counted in `wordHuntGoldenAnalytics`.
 

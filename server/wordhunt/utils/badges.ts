@@ -217,6 +217,8 @@ export const buildBadgeList = (
       name: badge.name,
       description: badge.description,
       category: badge.category,
+      // Golden badges are earned in Golden Letter games; all the others in Classic games.
+      mode: badge.category === "golden" ? "golden" : "classic",
       earned,
       progress,
     };

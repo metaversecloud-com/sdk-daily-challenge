@@ -56,18 +56,13 @@
   --gm-wordquest-bg: #ffffff;
 }
 
-/* Word Hunt: Golden Letter mode. Dark brown text on cream/gold keeps contrast well above WCAG AA. */
+/*
+ * Word Hunt: Golden Letter accents. Golden Letter mode uses the same palette as Classic; these only mark golden
+ * things (golden tiles, golden badges) and the goal medals, and look the same in every mode.
+ */
 :root {
-  --wh-golden-bg: #f6d77c;
-  --wh-golden-panel: #fff8e6;
-  --wh-golden-panel-hover: #fbecc4;
-  --wh-golden-text: #5b3a00;
-  --wh-golden-text-hover: #7a5000;
-  --wh-golden-divider: #edd9a3;
-  --wh-golden-focus: #2b1a00;
-  /* Golden tiles are gold; the tiles a player is dragging over turn light blue so the two never look alike. */
-  --wh-golden-tile: #f2b705;
-  --wh-golden-tile-selected: #9ed0f0;
+  /* Ring around golden tiles: dark enough to stand out from the cream tile (about 3.4:1, WCAG 1.4.11). */
+  --wh-golden-ring: #a87700;
 
   --wh-medal-bronze: #b87333;
   --wh-medal-silver: #8a8d91;
